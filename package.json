@@ -10,6 +10,8 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@mantine/core": "^9.4.1",
+    "@mantine/hooks": "^9.4.1",
     "@qdrant/js-client-rest": "^1.18.0",
     "@upstash/redis": "^1.38.0",
     "next": "16.2.10",
