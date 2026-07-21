@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 — Bot Configuration & Service Clients
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A POST API route is created at `/api/chat` using the Edge runtime.
-- [ ] CORS validation logic verifies that the incoming request's origin matches one of the domains in `allowedOrigins` in `botConfig.ts`. (Same-origin requests are also allowed).
-- [ ] Rate-limiting logic using `@upstash/ratelimit` verifies client IP and caps requests at 10 per minute per IP.
-- [ ] If the rate limit is exceeded, the API returns a `429 Too Many Requests` status code.
-- [ ] If the connection to Upstash Redis fails, the error is logged, but the request fails open (continues execution instead of throwing a 500 error).
-- [ ] Integration tests verify CORS header presence for valid/invalid origins and 429 response structures using mocked Redis behavior.
+- [x] A POST API route is created at `/api/chat` using the Edge runtime.
+- [x] CORS validation logic verifies that the incoming request's origin matches one of the domains in `allowedOrigins` in `botConfig.ts`. (Same-origin requests are also allowed).
+- [x] Rate-limiting logic using `@upstash/ratelimit` verifies client IP and caps requests at 10 per minute per IP.
+- [x] If the rate limit is exceeded, the API returns a `429 Too Many Requests` status code.
+- [x] If the connection to Upstash Redis fails, the error is logged, but the request fails open (continues execution instead of throwing a 500 error).
+- [x] Integration tests verify CORS header presence for valid/invalid origins and 429 response structures using mocked Redis behavior.

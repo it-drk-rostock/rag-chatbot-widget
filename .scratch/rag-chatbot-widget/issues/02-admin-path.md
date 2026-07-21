@@ -4,10 +4,10 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A dynamic Next.js route `/admin/[secret]/page.tsx` is implemented.
-- [ ] Next.js server-side checks verify the dynamic segment against the environment variable `ADMIN_SECRET_PATH`.
-- [ ] If the path parameter does not match the secret key, the server invokes the Next.js `notFound()` utility to return a standard 404 page.
-- [ ] If the path parameter matches, the page renders a simple Mantine password input UI requesting the `ADMIN_PASSWORD`.
-- [ ] Automated tests verify that requests to incorrect secret paths receive a 404, while correct paths load the login UI successfully.
+- [x] A dynamic Next.js route `/admin/[secret]/page.tsx` is implemented.
+- [x] Next.js server-side checks verify the dynamic segment against the environment variable `ADMIN_SECRET_PATH`.
+- [x] If the path parameter does not match the secret key, the server invokes the Next.js `notFound()` utility to return a standard 404 page.
+- [x] If the path parameter matches, the page renders a simple Mantine password input UI requesting the `ADMIN_PASSWORD`.
+- [x] Automated tests verify that requests to incorrect secret paths receive a 404, while correct paths load the login UI successfully.
