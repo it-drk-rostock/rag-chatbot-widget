@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { HelloWorldButton } from "./hello-world-button";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -34,6 +35,7 @@ export default function Home() {
             </a>{" "}
             center.
           </p>
+          {process.env.NODE_ENV === "development" && <HelloWorldButton />}
         </div>
         <div className={styles.ctas}>
           <a
