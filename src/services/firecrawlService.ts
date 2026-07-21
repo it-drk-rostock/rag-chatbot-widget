@@ -31,8 +31,8 @@ export class FirecrawlService {
       method: "POST",
       body: JSON.stringify({
         url,
-        maxDiscoveryDepth: 2,
-        limit: 150,
+        maxDiscoveryDepth: 3,
+        limit: 10,
         excludePaths: ["/impressum", "/datenschutz"],
         scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
       }),
@@ -52,16 +52,20 @@ export class FirecrawlService {
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(path.startsWith("http") ? path : `${this.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        ...init?.headers,
+    const response = await fetch(
+      path.startsWith("http") ? path : `${this.baseUrl}${path}`,
+      {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
       },
-    });
+    );
 
-    if (!response.ok) throw new Error(`Firecrawl request failed: ${response.status}`);
+    if (!response.ok)
+      throw new Error(`Firecrawl request failed: ${response.status}`);
     return response.json() as Promise<T>;
   }
 
