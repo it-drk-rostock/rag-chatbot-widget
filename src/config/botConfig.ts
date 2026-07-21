@@ -12,6 +12,7 @@ export type BotConfig = {
   crawlerTargetUrl: string;
   allowedOrigins: string[];
   embeddingModel: "text-embedding-3-small";
+  vectorCollection: string;
 };
 
 export const botConfig: BotConfig = {
@@ -27,4 +28,5 @@ export const botConfig: BotConfig = {
   crawlerTargetUrl: "https://example.com",
   allowedOrigins: ["http://localhost:3000"],
   embeddingModel: "text-embedding-3-small",
+  vectorCollection: "website-content",
 };

@@ -31,8 +31,8 @@ export class FirecrawlService {
       method: "POST",
       body: JSON.stringify({
         url,
-        maxDiscoveryDepth: 3,
-        limit: 10,
+        maxDiscoveryDepth: 2,
+        limit: 150,
         excludePaths: ["/impressum", "/datenschutz"],
         scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
       }),
