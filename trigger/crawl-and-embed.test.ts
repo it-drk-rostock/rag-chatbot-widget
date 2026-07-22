@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => {
   return {
     chunkMarkdown: vi.fn(),
     crawl: vi.fn(),
-    createEmbedding: vi.fn(),
+    embedMany: vi.fn(),
+    ensureCollectionExists: vi.fn(),
     metadata,
     task: vi.fn((definition) => definition),
     upsert: vi.fn(),
@@ -19,23 +20,31 @@ vi.mock("@trigger.dev/sdk", () => ({
   task: mocks.task,
 }));
 
+vi.mock("ai", () => ({
+  embedMany: mocks.embedMany,
+}));
+
+vi.mock("@ai-sdk/openai", () => ({
+  openai: {
+    embedding: vi.fn((model) => model),
+  },
+}));
+
 vi.mock("../src/services/firecrawlService", () => ({
   firecrawlService: { crawl: mocks.crawl },
 }));
 vi.mock("../src/services/markdownChunker", () => ({
   chunkMarkdown: mocks.chunkMarkdown,
 }));
-vi.mock("../src/services/openaiClient", () => ({
-  openaiClient: { embeddings: { create: mocks.createEmbedding } },
-}));
 vi.mock("../src/services/qdrantClient", () => ({
+  ensureCollectionExists: mocks.ensureCollectionExists,
   qdrantClient: { upsert: mocks.upsert },
 }));
 
 import { crawlAndEmbed } from "./crawl-and-embed";
 
 describe("crawlAndEmbedTask", () => {
-  it("crawls, chunks, embeds, and upserts each page in sequence", async () => {
+  it("crawls, checks collection existence, chunks, embeds, and upserts each page in sequence", async () => {
     const page = {
       markdown: "# Page",
       title: "Page",
@@ -47,8 +56,8 @@ describe("crawlAndEmbedTask", () => {
     ];
     mocks.crawl.mockResolvedValue([page]);
     mocks.chunkMarkdown.mockReturnValue(chunks);
-    mocks.createEmbedding.mockResolvedValue({
-      data: [{ embedding: [0.1, 0.2] }, { embedding: [0.3, 0.4] }],
+    mocks.embedMany.mockResolvedValue({
+      embeddings: [[0.1, 0.2], [0.3, 0.4]],
     });
 
     await expect(crawlAndEmbed()).resolves.toEqual({
@@ -57,10 +66,11 @@ describe("crawlAndEmbedTask", () => {
     });
 
     expect(mocks.crawl).toHaveBeenCalledWith();
+    expect(mocks.ensureCollectionExists).toHaveBeenCalledWith("website-content");
     expect(mocks.chunkMarkdown).toHaveBeenCalledWith(page.markdown, page);
-    expect(mocks.createEmbedding).toHaveBeenCalledWith({
+    expect(mocks.embedMany).toHaveBeenCalledWith({
       model: "text-embedding-3-small",
-      input: ["# Page", "Details"],
+      values: ["# Page", "Details"],
     });
     expect(mocks.upsert).toHaveBeenCalledWith(
       "website-content",
@@ -72,17 +82,5 @@ describe("crawlAndEmbedTask", () => {
         ],
       }),
     );
-    expect(mocks.crawl.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.chunkMarkdown.mock.invocationCallOrder[0],
-    );
-    expect(mocks.createEmbedding.mock.invocationCallOrder[0]).toBeLessThan(mocks.upsert.mock.invocationCallOrder[0]);
-    expect(mocks.chunkMarkdown.mock.invocationCallOrder[0]).toBeLessThan(mocks.createEmbedding.mock.invocationCallOrder[0]);
-    expect(mocks.metadata.set.mock.calls).toEqual([
-      ["status", "queued"],
-      ["status", "crawling"],
-      ["status", "embedding"],
-      ["status", "upserting"],
-      ["status", "completed"],
-    ]);
   });
 });

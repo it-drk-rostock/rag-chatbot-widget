@@ -27,12 +27,24 @@ export class FirecrawlService {
   async crawl(url = botConfig.crawlerTargetUrl): Promise<CrawledPage[]> {
     if (!this.apiKey) throw new Error("FIRECRAWL_API_KEY is required");
 
+    const limit = process.env.CRAWL_LIMIT
+      ? Number(process.env.CRAWL_LIMIT)
+      : process.env.NODE_ENV === "development"
+        ? 1
+        : 150;
+
+    const maxDiscoveryDepth = process.env.CRAWL_MAX_DEPTH
+      ? Number(process.env.CRAWL_MAX_DEPTH)
+      : process.env.NODE_ENV === "development"
+        ? 1
+        : 2;
+
     const crawl = await this.request<CrawlResponse>("/crawl", {
       method: "POST",
       body: JSON.stringify({
         url,
-        maxDiscoveryDepth: 2,
-        limit: 150,
+        maxDiscoveryDepth,
+        limit,
         excludePaths: ["/impressum", "/datenschutz"],
         scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
       }),
@@ -40,8 +52,13 @@ export class FirecrawlService {
 
     if (!crawl.id) throw new Error("Firecrawl did not return a crawl ID");
 
+    const startTime = Date.now();
+    const TIMEOUT_MS = 180_000;
     let status: CrawlStatusResponse;
     do {
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        throw new Error("Firecrawl crawl timed out after 180 seconds");
+      }
       await new Promise((resolve) => setTimeout(resolve, 1_000));
       status = await this.request<CrawlStatusResponse>(`/crawl/${crawl.id}`);
     } while (status.status === "scraping");

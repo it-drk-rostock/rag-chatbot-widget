@@ -8,33 +8,39 @@ export type MarkdownChunk = PageMetadata & {
   index: number;
 };
 
-const MAX_SECTION_LENGTH = 1_200;
-const WINDOW_LENGTH = 1_000;
-const WINDOW_OVERLAP = 150;
+const TARGET_CHUNK_SIZE = 1_000;
 
 export function chunkMarkdown(
   markdown: string,
   metadata: PageMetadata,
 ): MarkdownChunk[] {
-  const sections = markdown
-    .split(/(?=^#{1,3}\s+)/m)
-    .map((section) => section.trim())
-    .filter(Boolean);
-
-  return sections.flatMap((section) =>
-    section.length > MAX_SECTION_LENGTH
-      ? windows(section)
-      : [section],
-  ).map((content, index) => ({ ...metadata, content, index }));
-}
-
-function windows(section: string) {
+  const lines = markdown.split("\n");
   const chunks: string[] = [];
-  const step = WINDOW_LENGTH - WINDOW_OVERLAP;
+  let currentLines: string[] = [];
+  let currentLength = 0;
 
-  for (let start = 0; start < section.length; start += step) {
-    chunks.push(section.slice(start, start + WINDOW_LENGTH));
+  for (const line of lines) {
+    const isHeading = /^#{1,6}\s+/.test(line.trim());
+
+    if ((isHeading || currentLength + line.length + 1 > TARGET_CHUNK_SIZE) && currentLines.length > 0) {
+      const text = currentLines.join("\n").trim();
+      if (text) chunks.push(text);
+      currentLines = [];
+      currentLength = 0;
+    }
+
+    currentLines.push(line);
+    currentLength += line.length + 1;
   }
 
-  return chunks;
+  if (currentLines.length > 0) {
+    const text = currentLines.join("\n").trim();
+    if (text) chunks.push(text);
+  }
+
+  return chunks.map((content, index) => ({
+    ...metadata,
+    content,
+    index,
+  }));
 }

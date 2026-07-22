@@ -25,8 +25,10 @@ export const botConfig: BotConfig = {
   welcomeMessage: "Hallo! Wie kann ich Ihnen helfen?",
   systemPrompt:
     "Beantworte Fragen ausschließlich anhand des bereitgestellten Kontexts und verlinke die verwendeten Quellen als Markdown.",
-  crawlerTargetUrl: "https://example.com",
-  allowedOrigins: ["http://localhost:3000"],
+  crawlerTargetUrl: process.env.CRAWLER_TARGET_URL || "https://example.com",
+  allowedOrigins: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+    : ["http://localhost:3000"],
   embeddingModel: "text-embedding-3-small",
-  vectorCollection: "website-content",
+  vectorCollection: process.env.QDRANT_COLLECTION || "website-content",
 };

@@ -1,8 +1,16 @@
 import { openai } from "@ai-sdk/openai";
 import { Ratelimit } from "@upstash/ratelimit";
-import { streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  embed,
+  streamText,
+  toUIMessageStream,
+  type UIMessage,
+} from "ai";
 
 import { botConfig } from "../../../src/config/botConfig";
+import { qdrantClient } from "../../../src/services/qdrantClient";
 import { redisClient } from "../../../src/services/redisClient";
 
 export const runtime = "edge";
@@ -11,7 +19,6 @@ const rateLimiter = new Ratelimit({
   redis: redisClient,
   limiter: Ratelimit.slidingWindow(10, "1 m"),
 });
-const encoder = new TextEncoder();
 
 function corsHeaders(request: Request) {
   const headers = new Headers({
@@ -32,26 +39,27 @@ function corsHeaders(request: Request) {
   return headers;
 }
 
-function sseStream(textStream: AsyncIterable<string>) {
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        for await (const text of textStream) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-        }
-        controller.enqueue(encoder.encode("event: done\ndata: [DONE]\n\n"));
-      } catch (error) {
-        console.error("Chat completion failed", error);
-        controller.enqueue(
-          encoder.encode(
-            `event: error\ndata: ${JSON.stringify({ error: "Unable to generate a response" })}\n\n`,
-          ),
-        );
-      } finally {
-        controller.close();
+function getQueryText(body: { messages?: UIMessage[]; prompt?: string }): string | null {
+  if (typeof body.prompt === "string" && body.prompt.trim()) {
+    return body.prompt.trim();
+  }
+  if (Array.isArray(body.messages) && body.messages.length > 0) {
+    const lastUserMessage = [...body.messages].reverse().find((m) => m.role === "user");
+    if (lastUserMessage) {
+      if (Array.isArray(lastUserMessage.parts)) {
+        const textParts = lastUserMessage.parts
+          .filter((p): p is { type: "text"; text: string } => p.type === "text")
+          .map((p) => p.text)
+          .join("");
+        if (textParts.trim()) return textParts.trim();
       }
-    },
-  });
+      const raw = (lastUserMessage as unknown as Record<string, unknown>).content;
+      if (typeof raw === "string" && raw.trim()) {
+        return raw.trim();
+      }
+    }
+  }
+  return null;
 }
 
 export function OPTIONS(request: Request) {
@@ -79,26 +87,58 @@ export async function POST(request: Request) {
     console.error("Rate limit check failed", error);
   }
 
-  let prompt: unknown;
+  let body: { messages?: UIMessage[]; prompt?: string };
 
   try {
-    ({ prompt } = await request.json());
+    body = await request.json();
   } catch {
     return Response.json({ error: "Invalid JSON body" }, { status: 400, headers });
   }
 
-  if (typeof prompt !== "string" || !prompt.trim()) {
+  const query = getQueryText(body);
+  if (!query) {
     return Response.json({ error: "A prompt is required" }, { status: 400, headers });
   }
 
   try {
+    let context = "";
+    try {
+      const { embedding } = await embed({
+        model: openai.embedding(botConfig.embeddingModel),
+        value: query,
+      });
+
+      const searchResults = await qdrantClient.search(botConfig.vectorCollection, {
+        vector: embedding,
+        limit: 5,
+      });
+
+      context = searchResults
+        .map((res) => (typeof res.payload?.content === "string" ? res.payload.content : ""))
+        .filter(Boolean)
+        .join("\n\n");
+    } catch (error) {
+      console.error("Vector context retrieval failed", error);
+    }
+
+    const system = context
+      ? `${botConfig.systemPrompt}\n\nKontext:\n${context}`
+      : botConfig.systemPrompt;
+
+    const modelMessages = body.messages
+      ? await convertToModelMessages(body.messages)
+      : [{ role: "user" as const, content: query }];
+
     const result = streamText({
       model: openai("gpt-5.4-mini-2026-03-17"),
-      prompt,
+      system,
+      messages: modelMessages,
     });
 
-    headers.set("Content-Type", "text/event-stream");
-    return new Response(sseStream(result.textStream), { headers });
+    return createUIMessageStreamResponse({
+      stream: toUIMessageStream({ stream: result.stream }),
+      headers,
+    });
   } catch (error) {
     console.error("Chat completion failed", error);
     return Response.json({ error: "Unable to generate a response" }, { status: 502, headers });

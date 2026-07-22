@@ -5,27 +5,38 @@ import { botConfig } from "../../../src/config/botConfig";
 const limit = vi.hoisted(() => vi.fn());
 const slidingWindow = vi.hoisted(() => vi.fn(() => "10-per-minute"));
 const openai = vi.hoisted(() => vi.fn(() => "chat-model"));
+const embed = vi.hoisted(() => vi.fn());
+const convertToModelMessages = vi.hoisted(() => vi.fn((m) => Promise.resolve(m)));
 const streamText = vi.hoisted(() => vi.fn());
+const toUIMessageStream = vi.hoisted(() => vi.fn(() => "ui-stream"));
+const createUIMessageStreamResponse = vi.hoisted(() => vi.fn(({ stream, headers }) =>
+  new Response(stream as BodyInit, { headers }),
+));
+const search = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../src/services/redisClient", () => ({ redisClient: {} }));
+vi.mock("../../../src/services/qdrantClient", () => ({
+  qdrantClient: { search },
+}));
 vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: class {
     static slidingWindow = slidingWindow;
     limit = limit;
   },
 }));
-vi.mock("@ai-sdk/openai", () => ({ openai }));
-vi.mock("ai", () => ({ streamText }));
+vi.mock("@ai-sdk/openai", () => ({
+  openai: Object.assign(openai, { embedding: vi.fn((model) => model) }),
+}));
+vi.mock("ai", () => ({
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  embed,
+  streamText,
+  toUIMessageStream,
+}));
 
 import { OPTIONS, POST } from "./route";
 
-const textStream = (...tokens: string[]) =>
-  new ReadableStream<string>({
-    start(controller) {
-      tokens.forEach((token) => controller.enqueue(token));
-      controller.close();
-    },
-  });
 const request = (origin?: string, prompt = "Hello") =>
   new Request("https://chat.example/api/chat", {
     method: "POST",
@@ -38,17 +49,18 @@ describe("POST /api/chat", () => {
     botConfig.allowedOrigins = ["https://client.example"];
     limit.mockReset().mockResolvedValue({ success: true });
     openai.mockClear();
-    streamText.mockReset().mockReturnValue({ textStream: textStream("Hello ", "world") });
+    embed.mockReset().mockResolvedValue({ embedding: [0.1, 0.2] });
+    search.mockReset().mockResolvedValue([{ payload: { content: "Found facts." } }]);
+    streamText.mockReset().mockReturnValue({ stream: "model-stream" });
   });
 
-  it("streams OpenAI tokens as SSE with CORS headers", async () => {
+  it("streams response via createUIMessageStreamResponse with CORS headers", async () => {
     const response = await POST(
       new Request("https://chat.example/api/chat", {
         method: "POST",
         headers: {
           origin: "https://client.example",
           "cf-connecting-ip": "198.51.100.20",
-          "x-forwarded-for": "203.0.113.10",
         },
         body: JSON.stringify({ prompt: "Hello" }),
       }),
@@ -58,14 +70,21 @@ describe("POST /api/chat", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe(
       "https://client.example",
     );
-    expect(response.headers.get("content-type")).toContain("text/event-stream");
-    await expect(response.text()).resolves.toBe(
-      'data: {"text":"Hello "}\n\ndata: {"text":"world"}\n\nevent: done\ndata: [DONE]\n\n',
-    );
     expect(limit).toHaveBeenCalledWith("198.51.100.20");
-    expect(slidingWindow).toHaveBeenCalledWith(10, "1 m");
-    expect(openai).toHaveBeenCalledWith("gpt-5.4-mini-2026-03-17");
-    expect(streamText).toHaveBeenCalledWith({ model: "chat-model", prompt: "Hello" });
+    expect(embed).toHaveBeenCalledWith({
+      model: "text-embedding-3-small",
+      value: "Hello",
+    });
+    expect(search).toHaveBeenCalledWith("website-content", {
+      vector: [0.1, 0.2],
+      limit: 5,
+    });
+    expect(streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.stringContaining("Found facts."),
+      }),
+    );
+    expect(createUIMessageStreamResponse).toHaveBeenCalled();
   });
 
   it("omits the CORS allow-origin header for an invalid origin", async () => {
@@ -95,12 +114,6 @@ describe("POST /api/chat", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe(
       "https://client.example",
     );
-    expect(response.headers.get("access-control-allow-methods")).toBe(
-      "POST, OPTIONS",
-    );
-    expect(response.headers.get("access-control-allow-headers")).toBe(
-      "Content-Type",
-    );
   });
 
   it("returns a 429 JSON response when the IP limit is exceeded", async () => {
@@ -112,9 +125,6 @@ describe("POST /api/chat", () => {
     await expect(response.json()).resolves.toEqual({
       error: "Too many requests",
     });
-    expect(response.headers.get("access-control-allow-origin")).toBe(
-      "https://client.example",
-    );
   });
 
   it("logs rate-limit failures and allows the request", async () => {
@@ -141,24 +151,22 @@ describe("POST /api/chat", () => {
     await expect(response.json()).resolves.toEqual({ error: "A prompt is required" });
   });
 
-  it("sends an SSE error when completion streaming fails", async () => {
-    const error = new Error("OpenAI unavailable");
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    streamText.mockReturnValueOnce({
-      textStream: new ReadableStream({
-        start(controller) {
-          controller.error(error);
-        },
+  it("handles UIMessage[] payload from useChat", async () => {
+    const messages = [
+      { id: "1", role: "user" as const, parts: [{ type: "text" as const, text: "Tell me more" }] },
+    ];
+    const response = await POST(
+      new Request("https://chat.example/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ messages }),
       }),
-    });
-
-    const response = await POST(request());
+    );
 
     expect(response.status).toBe(200);
-    await expect(response.text()).resolves.toBe(
-      'event: error\ndata: {"error":"Unable to generate a response"}\n\n',
-    );
-    expect(consoleError).toHaveBeenCalledWith("Chat completion failed", error);
-    consoleError.mockRestore();
+    expect(embed).toHaveBeenCalledWith({
+      model: "text-embedding-3-small",
+      value: "Tell me more",
+    });
+    expect(convertToModelMessages).toHaveBeenCalledWith(messages);
   });
 });

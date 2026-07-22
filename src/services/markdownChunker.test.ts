@@ -25,16 +25,18 @@ describe("chunkMarkdown", () => {
     ]);
   });
 
-  it("uses overlapping windows for heading sections over 1200 characters", () => {
-    const markdown = `# Long section\n${"x".repeat(1_250)}`;
+  it("splits content at boundary line without cutting words mid-character when size target is reached", () => {
+    const line = "Word ".repeat(40); // 200 chars per line
+    const markdown = `# Section\n${line}\n${line}\n${line}\n${line}\n${line}\n${line}`;
     const chunks = chunkMarkdown(markdown, {
       url: "https://example.com/long",
       title: "Long page",
     });
 
-    expect(chunks).toHaveLength(2);
-    expect(chunks[0].content).toHaveLength(1_000);
-    expect(chunks[1].content).toBe(markdown.slice(850));
-    expect(chunks.map(({ index }) => index)).toEqual([0, 1]);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      expect(chunk.content).not.toMatch(/Wor$/); // Does not slice words mid-character
+    }
+    expect(chunks.map(({ index }) => index)).toEqual(chunks.map((_, i) => i));
   });
 });
