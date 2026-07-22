@@ -5,9 +5,9 @@ Central configuration (`botConfig.ts`) dynamically reads runtime server settings
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] `botConfig.ts` reads `crawlerTargetUrl` from `process.env.CRAWLER_TARGET_URL` (fallback `"https://example.com"`).
-- [ ] `botConfig.ts` reads `allowedOrigins` from `process.env.ALLOWED_ORIGINS` comma-separated string (fallback `["http://localhost:3000"]`).
-- [ ] `botConfig.ts` reads `vectorCollection` from `process.env.QDRANT_COLLECTION` (fallback `"website-content"`).
-- [ ] Existing unit tests in `src/config/botConfig.test.ts` pass and cover environment variable overrides.
+- [x] `botConfig.ts` reads `crawlerTargetUrl` from `process.env.CRAWLER_TARGET_URL` (fallback `"https://example.com"`).
+- [x] `botConfig.ts` reads `allowedOrigins` from `process.env.ALLOWED_ORIGINS` comma-separated string (fallback `["http://localhost:3000"]`).
+- [x] `botConfig.ts` reads `vectorCollection` from `process.env.QDRANT_COLLECTION` (fallback `"website-content"`).
+- [x] Existing unit tests in `src/config/botConfig.test.ts` pass and cover environment variable overrides.

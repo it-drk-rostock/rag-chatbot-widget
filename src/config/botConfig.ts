@@ -15,6 +15,10 @@ export type BotConfig = {
   vectorCollection: string;
 };
 
+let overrideCrawlerTargetUrl: string | undefined;
+let overrideAllowedOrigins: string[] | undefined;
+let overrideVectorCollection: string | undefined;
+
 export const botConfig: BotConfig = {
   colors: {
     primary: "#228be6",
@@ -25,10 +29,28 @@ export const botConfig: BotConfig = {
   welcomeMessage: "Hallo! Wie kann ich Ihnen helfen?",
   systemPrompt:
     "Beantworte Fragen ausschließlich anhand des bereitgestellten Kontexts und verlinke die verwendeten Quellen als Markdown.",
-  crawlerTargetUrl: process.env.CRAWLER_TARGET_URL || "https://example.com",
-  allowedOrigins: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
-    : ["http://localhost:3000"],
+  get crawlerTargetUrl() {
+    return overrideCrawlerTargetUrl ?? process.env.CRAWLER_TARGET_URL ?? "https://example.com";
+  },
+  set crawlerTargetUrl(val: string) {
+    overrideCrawlerTargetUrl = val;
+  },
+  get allowedOrigins() {
+    if (overrideAllowedOrigins !== undefined) {
+      return overrideAllowedOrigins;
+    }
+    return process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+      : ["http://localhost:3000"];
+  },
+  set allowedOrigins(val: string[]) {
+    overrideAllowedOrigins = val;
+  },
   embeddingModel: "text-embedding-3-small",
-  vectorCollection: process.env.QDRANT_COLLECTION || "website-content",
+  get vectorCollection() {
+    return overrideVectorCollection ?? process.env.QDRANT_COLLECTION ?? "website-content";
+  },
+  set vectorCollection(val: string) {
+    overrideVectorCollection = val;
+  },
 };
