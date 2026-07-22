@@ -1,6 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { auth, tasks } from "@trigger.dev/sdk";
+import type { crawlAndEmbedTask } from "@/trigger/crawl-and-embed";
 
 const COOKIE_NAME = "admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -103,4 +105,18 @@ export async function login(
 
 export async function logout() {
   (await cookies()).delete(COOKIE_NAME);
+}
+
+export async function triggerCrawl() {
+  if (!(await isAdminAuthenticated())) throw new Error("Unauthorized");
+
+  const handle = await tasks.trigger<typeof crawlAndEmbedTask>(
+    "crawl-and-embed",
+    undefined,
+  );
+  const publicToken = await auth.createPublicToken({
+    scopes: { read: { runs: [handle.id] } },
+  });
+
+  return { runId: handle.id, publicToken };
 }

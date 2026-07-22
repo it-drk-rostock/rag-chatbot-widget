@@ -38,6 +38,7 @@ export async function crawlAndEmbed() {
         throw new AbortTaskRunError("OpenAI returned an incomplete embedding batch");
       }
 
+      metadata.set("status", "upserting");
       await qdrantClient.upsert(botConfig.vectorCollection, {
         wait: true,
         points: chunks.map((chunk, index) => ({

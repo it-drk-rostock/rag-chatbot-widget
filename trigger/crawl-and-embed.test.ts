@@ -81,6 +81,7 @@ describe("crawlAndEmbedTask", () => {
       ["status", "queued"],
       ["status", "crawling"],
       ["status", "embedding"],
+      ["status", "upserting"],
       ["status", "completed"],
     ]);
   });
