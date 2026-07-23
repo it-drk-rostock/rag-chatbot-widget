@@ -5,8 +5,8 @@ Update `src/services/firecrawlService.ts` to accept `limit` and `maxDiscoveryDep
 
 **Blocked by:** 15 — Environment-Based Bot Configuration.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] `firecrawlService.crawl()` accepts `limit` from `process.env.CRAWL_LIMIT` (default 1) and `maxDiscoveryDepth` from `process.env.CRAWL_MAX_DEPTH` (default 1).
-- [ ] Polling status loop caps total retries (e.g. 180s max timeout) and throws a descriptive error if Firecrawl stalls.
-- [ ] Unit tests in `src/services/firecrawlService.test.ts` verify limit options and timeout behavior.
+- [x] `firecrawlService.crawl()` accepts `limit` from `process.env.CRAWL_LIMIT` (default 1) and `maxDiscoveryDepth` from `process.env.CRAWL_MAX_DEPTH` (default 1).
+- [x] Polling status loop caps total retries (e.g. 180s max timeout) and throws a descriptive error if Firecrawl stalls.
+- [x] Unit tests in `src/services/firecrawlService.test.ts` verify limit options and timeout behavior.
