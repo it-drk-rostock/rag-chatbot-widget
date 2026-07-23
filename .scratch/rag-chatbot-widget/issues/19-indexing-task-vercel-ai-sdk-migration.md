@@ -5,9 +5,9 @@ Refactor `trigger/crawl-and-embed.ts` to execute `ensureCollectionExists` before
 
 **Blocked by:** 16 — Qdrant Collection Auto-Initialization, 17 — Boundary-Aware Markdown Paragraph Chunker, 18 — Firecrawl Test Limits & Polling Timeout.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] `crawlAndEmbed` calls `ensureCollectionExists(botConfig.vectorCollection)` prior to upserting.
-- [ ] Replace `openaiClient.embeddings.create` with `embedMany({ model: openai.embedding("text-embedding-3-small"), values: ... })` from `ai` and `@ai-sdk/openai`.
-- [ ] Update `trigger/crawl-and-embed.test.ts` to mock Vercel AI SDK `embedMany` and verify collection initialization and point upsert formatting.
-- [ ] Remove or deprecate standalone `src/services/openaiClient.ts`.
+- [x] `crawlAndEmbed` calls `ensureCollectionExists(botConfig.vectorCollection)` prior to upserting.
+- [x] Replace `openaiClient.embeddings.create` with `embedMany({ model: openai.embedding("text-embedding-3-small"), values: ... })` from `ai` and `@ai-sdk/openai`.
+- [x] Update `trigger/crawl-and-embed.test.ts` to mock Vercel AI SDK `embedMany` and verify collection initialization and point upsert formatting.
+- [x] Remove or deprecate standalone `src/services/openaiClient.ts`.
