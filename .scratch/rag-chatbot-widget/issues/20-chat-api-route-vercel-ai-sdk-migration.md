@@ -5,11 +5,11 @@ Refactor `/api/chat` route handler to accept `UIMessage[]` payloads, search Qdra
 
 **Blocked by:** 15 — Environment-Based Bot Configuration, 16 — Qdrant Collection Auto-Initialization.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `/api/chat` receives `messages: UIMessage[]` body payload.
-- [ ] Query vector context in Qdrant using Vercel AI SDK `embed({ model: openai.embedding("text-embedding-3-small"), value: userPrompt })`.
-- [ ] Pass retrieved Qdrant payload text as `system` prompt context.
-- [ ] Return `createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })` with CORS headers.
-- [ ] Preserve Upstash Redis rate-limiting (status 429 on limit exceeded).
-- [ ] Update `app/api/chat/route.test.ts` to test stream creation, CORS, and rate-limiting.
+- [x] `/api/chat` receives `messages: UIMessage[]` body payload.
+- [x] Query vector context in Qdrant using Vercel AI SDK `embed({ model: openai.embedding("text-embedding-3-small"), value: userPrompt })`.
+- [x] Pass retrieved Qdrant payload text as `system` prompt context.
+- [x] Return `createUIMessageStreamResponse({ stream: toUIMessageStream({ stream: result.stream }) })` with CORS headers.
+- [x] Preserve Upstash Redis rate-limiting (status 429 on limit exceeded).
+- [x] Update `app/api/chat/route.test.ts` to test stream creation, CORS, and rate-limiting.

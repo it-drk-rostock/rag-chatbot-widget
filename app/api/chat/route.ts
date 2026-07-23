@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       : [{ role: "user" as const, content: query }];
 
     const result = streamText({
-      model: openai("gpt-5.4-mini-2026-03-17"),
+      model: openai("gpt-4o-mini"),
       system,
       messages: modelMessages,
     });
