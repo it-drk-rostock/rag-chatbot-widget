@@ -1,6 +1,7 @@
+import "dotenv/config";
 import { createHash } from "node:crypto";
 
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { AbortTaskRunError, metadata, task } from "@trigger.dev/sdk";
 import { embedMany } from "ai";
 
@@ -26,6 +27,8 @@ export async function crawlAndEmbed() {
   let chunksProcessed = 0;
 
   await ensureCollectionExists(botConfig.vectorCollection);
+
+  const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   for (const page of pages) {
     const chunks = chunkMarkdown(page.markdown, page);

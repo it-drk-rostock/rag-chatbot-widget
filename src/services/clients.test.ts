@@ -36,11 +36,13 @@ describe("service clients", () => {
     const { qdrantClient } = await import("./qdrantClient");
     const { redisClient } = await import("./redisClient");
 
-    expect(qdrantClient).toBeDefined();
-    expect(redisClient).toBeDefined();
+    // Accessing property on proxy triggers lazy client instantiation
+    void qdrantClient.collectionExists;
     expect(clientConstructors.qdrant).toHaveBeenCalledWith({
       url: "https://qdrant.example.com",
       apiKey: "qdrant-key",
+      port: 443,
+      checkCompatibility: false,
     });
     expect(clientConstructors.redis).toHaveBeenCalledWith({
       url: "https://redis.example.com",

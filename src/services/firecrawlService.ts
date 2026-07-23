@@ -59,7 +59,11 @@ export class FirecrawlService {
     return this.pages(status);
   }
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+  private async request<T>(
+    path: string,
+    init?: RequestInit,
+    retries = 3,
+  ): Promise<T> {
     const response = await fetch(
       path.startsWith("http") ? path : `${this.baseUrl}${path}`,
       {
@@ -71,6 +75,15 @@ export class FirecrawlService {
         },
       },
     );
+
+    if (response.status === 429 && retries > 0) {
+      const retryAfterHeader = response.headers?.get("retry-after");
+      const retryAfterMs = retryAfterHeader
+        ? parseInt(retryAfterHeader, 10) * 1000 || 1000
+        : Math.pow(2, 3 - retries) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+      return this.request<T>(path, init, retries - 1);
+    }
 
     if (!response.ok)
       throw new Error(`Firecrawl request failed: ${response.status}`);

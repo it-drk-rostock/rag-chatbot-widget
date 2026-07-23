@@ -75,4 +75,24 @@ describe("FirecrawlService", () => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
   });
+
+  it("retries on 429 rate limit status code and succeeds after backoff", async () => {
+    vi.stubEnv("FIRECRAWL_API_KEY", "firecrawl-key");
+    vi.useFakeTimers();
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }))
+      .mockResolvedValueOnce(Response.json({ id: "crawl-retry" }))
+      .mockResolvedValueOnce(Response.json({ status: "completed", data: [] }));
+
+    const { FirecrawlService } = await import("./firecrawlService");
+    const crawlPromise = new FirecrawlService().crawl("https://example.com");
+    await vi.advanceTimersByTimeAsync(5_000);
+    const pages = await crawlPromise;
+
+    expect(pages).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
 });
+

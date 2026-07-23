@@ -24,10 +24,15 @@ vi.mock("ai", () => ({
   embedMany: mocks.embedMany,
 }));
 
+const mockEmbedding = vi.hoisted(() => vi.fn((model) => model));
+
 vi.mock("@ai-sdk/openai", () => ({
   openai: {
-    embedding: vi.fn((model) => model),
+    embedding: mockEmbedding,
   },
+  createOpenAI: vi.fn(() => ({
+    embedding: mockEmbedding,
+  })),
 }));
 
 vi.mock("../src/services/firecrawlService", () => ({
