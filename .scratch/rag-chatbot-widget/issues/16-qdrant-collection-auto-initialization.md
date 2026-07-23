@@ -5,10 +5,9 @@
 
 **Blocked by:** 15 — Environment-Based Bot Configuration.
 
-**Status:** done
+**Status:** complete
 
 - [x] Export `ensureCollectionExists` helper in `src/services/qdrantClient.ts`.
 - [x] Check collection existence using `qdrantClient.collectionExists(collectionName)`.
 - [x] Call `qdrantClient.createCollection` with vector size 1536 and Cosine distance metric if `collectionExists` returns false.
 - [x] Add unit tests verifying `ensureCollectionExists` creates missing collections and skips existing ones.
-
