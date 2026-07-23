@@ -5,9 +5,9 @@ Refactor `src/services/markdownChunker.ts` to use a linear, single-pass paragrap
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Refactor `chunkMarkdown` in `src/services/markdownChunker.ts` to single-pass line/paragraph buffering ($O(N)$).
-- [ ] Flush chunks on heading lines (`#`, `##`, `###`) or paragraph breaks up to target size ~1,000 characters.
-- [ ] Ensure no words, sentences, or syntax tokens are split mid-character across chunk boundaries.
-- [ ] Update unit tests in `src/services/markdownChunker.test.ts` to verify heading boundaries, paragraph breaks, and chunk metadata.
+- [x] Refactor `chunkMarkdown` in `src/services/markdownChunker.ts` to single-pass line/paragraph buffering ($O(N)$).
+- [x] Flush chunks on heading lines (`#`, `##`, `###`) or paragraph breaks up to target size ~1,000 characters.
+- [x] Ensure no words, sentences, or syntax tokens are split mid-character across chunk boundaries.
+- [x] Update unit tests in `src/services/markdownChunker.test.ts` to verify heading boundaries, paragraph breaks, and chunk metadata.

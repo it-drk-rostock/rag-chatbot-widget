@@ -39,4 +39,21 @@ describe("chunkMarkdown", () => {
     }
     expect(chunks.map(({ index }) => index)).toEqual(chunks.map((_, i) => i));
   });
+
+  it("flushes chunks on paragraph breaks when size target is reached", () => {
+    const para1 = "Paragraph 1: " + "a".repeat(600);
+    const para2 = "Paragraph 2: " + "b".repeat(500);
+    const markdown = `${para1}\n\n${para2}`;
+
+    const chunks = chunkMarkdown(markdown, {
+      url: "https://example.com/paras",
+      title: "Paragraph test",
+    });
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0].content).toBe(para1);
+    expect(chunks[1].content).toBe(para2);
+    expect(chunks[0].index).toBe(0);
+    expect(chunks[1].index).toBe(1);
+  });
 });

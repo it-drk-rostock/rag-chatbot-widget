@@ -21,12 +21,18 @@ export function chunkMarkdown(
 
   for (const line of lines) {
     const isHeading = /^#{1,6}\s+/.test(line.trim());
+    const isParagraphBreak = line.trim() === "";
 
-    if ((isHeading || currentLength + line.length + 1 > TARGET_CHUNK_SIZE) && currentLines.length > 0) {
-      const text = currentLines.join("\n").trim();
-      if (text) chunks.push(text);
-      currentLines = [];
-      currentLength = 0;
+    if (currentLines.length > 0) {
+      const wouldExceed = currentLength + line.length + 1 > TARGET_CHUNK_SIZE;
+      const isParagraphAtTarget = isParagraphBreak && currentLength >= TARGET_CHUNK_SIZE;
+
+      if (isHeading || isParagraphAtTarget || wouldExceed) {
+        const text = currentLines.join("\n").trim();
+        if (text) chunks.push(text);
+        currentLines = [];
+        currentLength = 0;
+      }
     }
 
     currentLines.push(line);
