@@ -39,12 +39,17 @@ function corsHeaders(request: Request) {
   return headers;
 }
 
-function getQueryText(body: { messages?: UIMessage[]; prompt?: string }): string | null {
+function getQueryText(body: {
+  messages?: UIMessage[];
+  prompt?: string;
+}): string | null {
   if (typeof body.prompt === "string" && body.prompt.trim()) {
     return body.prompt.trim();
   }
   if (Array.isArray(body.messages) && body.messages.length > 0) {
-    const lastUserMessage = [...body.messages].reverse().find((m) => m.role === "user");
+    const lastUserMessage = [...body.messages]
+      .reverse()
+      .find((m) => m.role === "user");
     if (lastUserMessage) {
       if (Array.isArray(lastUserMessage.parts)) {
         const textParts = lastUserMessage.parts
@@ -53,7 +58,8 @@ function getQueryText(body: { messages?: UIMessage[]; prompt?: string }): string
           .join("");
         if (textParts.trim()) return textParts.trim();
       }
-      const raw = (lastUserMessage as unknown as Record<string, unknown>).content;
+      const raw = (lastUserMessage as unknown as Record<string, unknown>)
+        .content;
       if (typeof raw === "string" && raw.trim()) {
         return raw.trim();
       }
@@ -92,12 +98,18 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400, headers });
+    return Response.json(
+      { error: "Invalid JSON body" },
+      { status: 400, headers },
+    );
   }
 
   const query = getQueryText(body);
   if (!query) {
-    return Response.json({ error: "A prompt is required" }, { status: 400, headers });
+    return Response.json(
+      { error: "A prompt is required" },
+      { status: 400, headers },
+    );
   }
 
   try {
@@ -108,13 +120,18 @@ export async function POST(request: Request) {
         value: query,
       });
 
-      const searchResults = await qdrantClient.search(botConfig.vectorCollection, {
-        vector: embedding,
-        limit: 5,
-      });
+      const searchResults = await qdrantClient.search(
+        botConfig.vectorCollection,
+        {
+          vector: embedding,
+          limit: 5,
+        },
+      );
 
       context = searchResults
-        .map((res) => (typeof res.payload?.content === "string" ? res.payload.content : ""))
+        .map((res) =>
+          typeof res.payload?.content === "string" ? res.payload.content : "",
+        )
         .filter(Boolean)
         .join("\n\n");
     } catch (error) {
@@ -130,7 +147,7 @@ export async function POST(request: Request) {
       : [{ role: "user" as const, content: query }];
 
     const result = streamText({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-5.4-mini-2026-03-17"),
       system,
       messages: modelMessages,
     });
@@ -141,6 +158,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Chat completion failed", error);
-    return Response.json({ error: "Unable to generate a response" }, { status: 502, headers });
+    return Response.json(
+      { error: "Unable to generate a response" },
+      { status: 502, headers },
+    );
   }
 }

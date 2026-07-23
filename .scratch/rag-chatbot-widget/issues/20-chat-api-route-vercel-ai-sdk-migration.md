@@ -5,7 +5,7 @@ Refactor `/api/chat` route handler to accept `UIMessage[]` payloads, search Qdra
 
 **Blocked by:** 15 — Environment-Based Bot Configuration, 16 — Qdrant Collection Auto-Initialization.
 
-**Status:** done
+**Status:** complete
 
 - [x] `/api/chat` receives `messages: UIMessage[]` body payload.
 - [x] Query vector context in Qdrant using Vercel AI SDK `embed({ model: openai.embedding("text-embedding-3-small"), value: userPrompt })`.

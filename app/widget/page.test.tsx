@@ -43,6 +43,26 @@ describe("ChatMessages", () => {
     expect(page).toContain('role="status"');
   });
 
+  it("renders source markdown links as buttons", () => {
+    const page = renderToStaticMarkup(
+      <MantineProvider>
+        <ChatMessages
+          loading={false}
+          messages={[
+            {
+              id: "assistant-link",
+              role: "assistant",
+              content: "Siehe [Quelle](https://example.com/doc) for info.",
+            },
+          ]}
+        />
+      </MantineProvider>,
+    );
+
+    expect(page).toContain('href="https://example.com/doc"');
+    expect(page).toContain("Quelle");
+  });
+
   it("renders WidgetPage with initial welcome message", () => {
     const page = renderToStaticMarkup(
       <MantineProvider>
@@ -54,3 +74,4 @@ describe("ChatMessages", () => {
     expect(page).toContain("Willkommen");
   });
 });
+

@@ -5,9 +5,10 @@ Refactor `app/widget/page.tsx` to use the `@ai-sdk/react` `useChat` hook for man
 
 **Blocked by:** 20 — Chat API Route Vercel AI SDK Migration.
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Refactor `WidgetPage` component in `app/widget/page.tsx` to use `useChat` from `@ai-sdk/react`.
-- [ ] Render source Markdown links as Mantine buttons inside assistant messages.
-- [ ] Ensure automatic smooth scrolling on message changes.
-- [ ] Update `app/widget/page.test.tsx` to test widget rendering and interaction with `useChat` mock.
+- [x] Refactor `WidgetPage` component in `app/widget/page.tsx` to use `useChat` from `@ai-sdk/react`.
+- [x] Render source Markdown links as Mantine buttons inside assistant messages.
+- [x] Ensure automatic smooth scrolling on message changes.
+- [x] Update `app/widget/page.test.tsx` to test widget rendering and interaction with `useChat` mock.
+
