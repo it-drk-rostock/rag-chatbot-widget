@@ -103,5 +103,21 @@ describe("crawlAndEmbedTask", () => {
       content: "# Page",
     });
   });
+
+  it("resets collection to purge stale vectors even when crawl returns zero pages", async () => {
+    vi.clearAllMocks();
+    mocks.crawl.mockResolvedValue([]);
+
+    await expect(crawlAndEmbed()).resolves.toEqual({
+      pages: 0,
+      chunks: 0,
+    });
+
+    expect(mocks.crawl).toHaveBeenCalled();
+    expect(mocks.resetCollection).toHaveBeenCalledWith("website-content");
+    expect(mocks.embedMany).not.toHaveBeenCalled();
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
 });
+
 
