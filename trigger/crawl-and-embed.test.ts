@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => {
     chunkMarkdown: vi.fn(),
     crawl: vi.fn(),
     embedMany: vi.fn(),
-    ensureCollectionExists: vi.fn(),
+    resetCollection: vi.fn(),
     metadata,
     task: vi.fn((definition) => definition),
     upsert: vi.fn(),
@@ -42,22 +42,22 @@ vi.mock("../src/services/markdownChunker", () => ({
   chunkMarkdown: mocks.chunkMarkdown,
 }));
 vi.mock("../src/services/qdrantClient", () => ({
-  ensureCollectionExists: mocks.ensureCollectionExists,
+  resetCollection: mocks.resetCollection,
   qdrantClient: { upsert: mocks.upsert },
 }));
 
 import { crawlAndEmbed } from "./crawl-and-embed";
 
 describe("crawlAndEmbedTask", () => {
-  it("crawls, checks collection existence, chunks, embeds, and upserts each page in sequence", async () => {
+  it("crawls, resets collection, chunks, embeds, and upserts each page in sequence", async () => {
     const page = {
-      markdown: "# Page",
+      markdown: "# Page\nFull page raw content",
       title: "Page",
       url: "https://example.com/page",
     };
     const chunks = [
-      { ...page, content: "# Page", index: 0 },
-      { ...page, content: "Details", index: 1 },
+      { url: page.url, title: page.title, content: "# Page", index: 0 },
+      { url: page.url, title: page.title, content: "Details", index: 1 },
     ];
     mocks.crawl.mockResolvedValue([page]);
     mocks.chunkMarkdown.mockReturnValue(chunks);
@@ -71,7 +71,7 @@ describe("crawlAndEmbedTask", () => {
     });
 
     expect(mocks.crawl).toHaveBeenCalledWith();
-    expect(mocks.ensureCollectionExists).toHaveBeenCalledWith("website-content");
+    expect(mocks.resetCollection).toHaveBeenCalledWith("website-content");
     expect(mocks.chunkMarkdown).toHaveBeenCalledWith(page.markdown, page);
     expect(mocks.embedMany).toHaveBeenCalledWith({
       model: "text-embedding-3-small",
@@ -87,5 +87,15 @@ describe("crawlAndEmbedTask", () => {
         ],
       }),
     );
+
+    // Verify resetCollection was called before upsert
+    const resetCallOrder = mocks.resetCollection.mock.invocationCallOrder[0];
+    const upsertCallOrder = mocks.upsert.mock.invocationCallOrder[0];
+    expect(resetCallOrder).toBeLessThan(upsertCallOrder);
+
+    // Verify payload does NOT contain raw markdown
+    const upsertPayload = mocks.upsert.mock.calls[0][1].points[0].payload;
+    expect(upsertPayload).not.toHaveProperty("markdown");
   });
 });
+

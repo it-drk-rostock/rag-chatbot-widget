@@ -56,4 +56,26 @@ describe("chunkMarkdown", () => {
     expect(chunks[0].index).toBe(0);
     expect(chunks[1].index).toBe(1);
   });
+
+  it("strips raw markdown and extra metadata properties from generated chunks", () => {
+    const rawPage = {
+      markdown: "# Header\nSome raw page content",
+      url: "https://example.com/page",
+      title: "Example Page",
+      extraField: "should be omitted",
+    };
+
+    const chunks = chunkMarkdown(rawPage.markdown, rawPage as any);
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toEqual({
+      url: "https://example.com/page",
+      title: "Example Page",
+      content: "# Header\nSome raw page content",
+      index: 0,
+    });
+    expect(chunks[0]).not.toHaveProperty("markdown");
+    expect(chunks[0]).not.toHaveProperty("extraField");
+  });
 });
+

@@ -27,3 +27,15 @@ export async function ensureCollectionExists(collectionName: string) {
     });
   }
 }
+
+export async function resetCollection(collectionName: string) {
+  const response = await qdrantClient.collectionExists(collectionName);
+  const exists = typeof response === "boolean" ? response : Boolean(response?.exists);
+  if (exists) {
+    await qdrantClient.deleteCollection(collectionName);
+  }
+  await qdrantClient.createCollection(collectionName, {
+    vectors: { size: 1536, distance: "Cosine" },
+  });
+}
+

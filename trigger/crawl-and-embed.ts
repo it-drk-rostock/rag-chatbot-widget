@@ -11,7 +11,7 @@ import {
   chunkMarkdown,
   type MarkdownChunk,
 } from "../src/services/markdownChunker";
-import { ensureCollectionExists, qdrantClient } from "../src/services/qdrantClient";
+import { qdrantClient, resetCollection } from "../src/services/qdrantClient";
 
 function pointId(chunk: MarkdownChunk) {
   const hash = createHash("sha256")
@@ -26,7 +26,8 @@ export async function crawlAndEmbed() {
   const pages = await firecrawlService.crawl();
   let chunksProcessed = 0;
 
-  await ensureCollectionExists(botConfig.vectorCollection);
+  await resetCollection(botConfig.vectorCollection);
+
 
   const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 

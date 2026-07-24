@@ -27,8 +27,9 @@ export class FirecrawlService {
   async crawl(url = botConfig.crawlerTargetUrl): Promise<CrawledPage[]> {
     if (!this.apiKey) throw new Error("FIRECRAWL_API_KEY is required");
 
-    const limit = Number(process.env.CRAWL_LIMIT) || 1;
-    const maxDiscoveryDepth = Number(process.env.CRAWL_MAX_DEPTH) || 1;
+    const limit = Number(process.env.CRAWL_LIMIT) || 150;
+    const maxDiscoveryDepth = Number(process.env.CRAWL_MAX_DEPTH) || 3;
+
 
     const crawl = await this.request<CrawlResponse>("/crawl", {
       method: "POST",

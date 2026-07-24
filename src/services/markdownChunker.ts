@@ -45,8 +45,10 @@ export function chunkMarkdown(
   }
 
   return chunks.map((content, index) => ({
-    ...metadata,
+    url: metadata.url,
+    title: metadata.title,
     content,
     index,
   }));
+
 }

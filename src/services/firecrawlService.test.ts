@@ -35,7 +35,7 @@ describe("FirecrawlService", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults limit and maxDiscoveryDepth to 1 when env vars unset", async () => {
+  it("defaults limit to 150 and maxDiscoveryDepth to 3 when env vars unset", async () => {
     vi.unstubAllEnvs();
     vi.stubEnv("FIRECRAWL_API_KEY", "firecrawl-key");
     vi.useFakeTimers();
@@ -49,12 +49,13 @@ describe("FirecrawlService", () => {
     await crawl;
 
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
-      maxDiscoveryDepth: 1,
-      limit: 1,
+      maxDiscoveryDepth: 3,
+      limit: 150,
     });
     vi.useRealTimers();
     vi.unstubAllEnvs();
   });
+
 
   it("throws timeout error when polling exceeds 180 seconds", async () => {
     vi.stubEnv("FIRECRAWL_API_KEY", "firecrawl-key");
