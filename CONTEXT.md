@@ -19,3 +19,13 @@ _Avoid_: Ingest pipeline, scraper task
 **Chat Widget**:
 The user-facing embeddable chat interface loaded on external websites to interact with the assistant.
 _Avoid_: Bot UI, chat frame
+
+**Vector Payload**:
+The payload attached to a point in Qdrant storing chunk metadata (`url`, `title`, `index`) and `content` (the chunk's specific Markdown text).
+_Avoid_: Storing full-page unchunked raw markdown in payloads
+
+**Full Re-index**:
+Clearing or resetting existing vectors prior to crawling and embedding to guarantee no orphaned or stale chunks remain in Qdrant.
+_Avoid_: Partial upserts without stale chunk cleanup
+
+

@@ -93,9 +93,15 @@ describe("crawlAndEmbedTask", () => {
     const upsertCallOrder = mocks.upsert.mock.invocationCallOrder[0];
     expect(resetCallOrder).toBeLessThan(upsertCallOrder);
 
-    // Verify payload does NOT contain raw markdown
+    // Verify payload does NOT contain raw markdown and matches exact target shape
     const upsertPayload = mocks.upsert.mock.calls[0][1].points[0].payload;
     expect(upsertPayload).not.toHaveProperty("markdown");
+    expect(upsertPayload).toEqual({
+      url: page.url,
+      title: page.title,
+      index: 0,
+      content: "# Page",
+    });
   });
 });
 

@@ -51,7 +51,12 @@ export async function crawlAndEmbed() {
       points: chunks.map((chunk, index) => ({
         id: pointId(chunk),
         vector: embeddings[index],
-        payload: chunk,
+        payload: {
+          url: chunk.url,
+          title: chunk.title,
+          index: chunk.index,
+          content: chunk.content,
+        },
       })),
     });
     chunksProcessed += chunks.length;
