@@ -10,6 +10,8 @@ export type BotConfig = {
   welcomeMessage: string;
   systemPrompt: string;
   crawlerTargetUrl: string;
+  readonly crawlLimit: number;
+  readonly crawlMaxDepth: number;
   allowedOrigins: string[];
   embeddingModel: "text-embedding-3-small";
   vectorCollection: string;
@@ -34,6 +36,12 @@ export const botConfig: BotConfig = {
   },
   set crawlerTargetUrl(val: string) {
     overrideCrawlerTargetUrl = val;
+  },
+  get crawlLimit() {
+    return Number(process.env.CRAWL_LIMIT ?? 150);
+  },
+  get crawlMaxDepth() {
+    return Number(process.env.CRAWL_MAX_DEPTH ?? 3);
   },
   get allowedOrigins() {
     if (overrideAllowedOrigins !== undefined) {
