@@ -28,4 +28,13 @@ _Avoid_: Storing full-page unchunked raw markdown in payloads
 Clearing or resetting existing vectors prior to crawling and embedding to guarantee no orphaned or stale chunks remain in Qdrant.
 _Avoid_: Partial upserts without stale chunk cleanup
 
+**Manual Vector Reset**:
+An administrative operation triggered from the Admin Dashboard that resets/re-initializes the Qdrant vector collection on demand without running a crawl pipeline.
+_Avoid_: Wiping vector DB during active chat traffic without admin confirmation
+
+**Firecrawl SDK Wrapper**:
+The application service interface wrapping the official `@mendable/firecrawl-js` client SDK, eliminating legacy raw REST fetch calls and manual polling timeouts.
+_Avoid_: Custom HTTP polling loops, direct raw REST API requests to Firecrawl
+
+
 
