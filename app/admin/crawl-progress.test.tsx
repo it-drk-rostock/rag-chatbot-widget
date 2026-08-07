@@ -1,10 +1,14 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { MantineProvider } from "@mantine/core";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useRealtimeRunMock, triggerCrawlMock } = vi.hoisted(() => ({
+const { useRealtimeRunMock, triggerCrawlMock, resetVectorCollectionActionMock } = vi.hoisted(() => ({
   useRealtimeRunMock: vi.fn(),
   triggerCrawlMock: vi.fn(),
+  resetVectorCollectionActionMock: vi.fn(),
 }));
 
 vi.mock("@trigger.dev/react-hooks", () => ({
@@ -13,11 +17,30 @@ vi.mock("@trigger.dev/react-hooks", () => ({
 
 vi.mock("./actions", () => ({
   triggerCrawl: triggerCrawlMock,
+  resetVectorCollectionAction: resetVectorCollectionActionMock,
 }));
 
 import { CrawlProgress } from "./crawl-progress";
 
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  });
+});
+
 describe("CrawlProgress Component", () => {
+  beforeEach(() => {
+    useRealtimeRunMock.mockReturnValue({ run: undefined });
+    resetVectorCollectionActionMock.mockReset();
+  });
+
+  afterEach(cleanup);
+
   it("renders trigger button when no run is active", () => {
     useRealtimeRunMock.mockReturnValue({ run: undefined });
 
@@ -92,5 +115,32 @@ describe("CrawlProgress Component", () => {
     expect(html).toContain('data-testid="stage-embedding" data-state="completed"');
     expect(html).toContain('data-testid="stage-upserting" data-state="completed"');
     expect(html).toContain('data-testid="stage-completed" data-state="completed"');
+  });
+
+  it("opens a confirmation modal before resetting the vector database", async () => {
+    render(
+      <MantineProvider>
+        <CrawlProgress />
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset Vector DB" }));
+
+    expect(await screen.findByRole("dialog", { name: "Reset Vector DB?" })).toBeTruthy();
+    expect(resetVectorCollectionActionMock).not.toHaveBeenCalled();
+  });
+
+  it("dispatches the vector reset after confirmation", async () => {
+    render(
+      <MantineProvider>
+        <CrawlProgress />
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset Vector DB" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset Vector DB?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Reset Vector DB" }));
+
+    await waitFor(() => expect(resetVectorCollectionActionMock).toHaveBeenCalledOnce());
   });
 });

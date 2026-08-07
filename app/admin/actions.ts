@@ -3,6 +3,8 @@
 import { cookies } from "next/headers";
 import { auth, tasks } from "@trigger.dev/sdk";
 import type { crawlAndEmbedTask } from "@/trigger/crawl-and-embed";
+import { botConfig } from "../../src/config/botConfig";
+import { resetCollection } from "../../src/services/qdrantClient";
 
 const COOKIE_NAME = "admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -119,4 +121,9 @@ export async function triggerCrawl() {
   });
 
   return { runId: handle.id, publicToken };
+}
+
+export async function resetVectorCollectionAction() {
+  if (!(await isAdminAuthenticated())) throw new Error("Unauthorized");
+  await resetCollection(botConfig.vectorCollection);
 }

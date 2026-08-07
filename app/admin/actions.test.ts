@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { cookieStore, trigger, createPublicToken } = vi.hoisted(() => ({
+const { cookieStore, trigger, createPublicToken, resetCollection } = vi.hoisted(() => ({
   cookieStore: {
     get: vi.fn(),
     set: vi.fn(),
@@ -8,6 +8,7 @@ const { cookieStore, trigger, createPublicToken } = vi.hoisted(() => ({
   },
   trigger: vi.fn(),
   createPublicToken: vi.fn(),
+  resetCollection: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => cookieStore) }));
@@ -15,8 +16,9 @@ vi.mock("@trigger.dev/sdk", () => ({
   tasks: { trigger },
   auth: { createPublicToken },
 }));
+vi.mock("../../src/services/qdrantClient", () => ({ resetCollection }));
 
-import { login, triggerCrawl } from "./actions";
+import { login, resetVectorCollectionAction, triggerCrawl } from "./actions";
 
 describe("admin login", () => {
   let currentCookie: string | undefined;
@@ -35,6 +37,7 @@ describe("admin login", () => {
     });
     trigger.mockReset();
     createPublicToken.mockReset();
+    resetCollection.mockReset();
     vi.stubEnv("ADMIN_PASSWORD", "correct-password");
     vi.stubEnv("ADMIN_SESSION_SECRET", "independent-high-entropy-test-secret");
   });
@@ -90,5 +93,20 @@ describe("admin login", () => {
   it("throws when unauthenticated", async () => {
     cookieStore.get.mockReturnValue(undefined);
     await expect(triggerCrawl()).rejects.toThrow("Unauthorized");
+  });
+
+  it("resets the configured vector collection when authenticated", async () => {
+    const formData = new FormData();
+    formData.set("password", "correct-password");
+    await login({}, formData);
+
+    await resetVectorCollectionAction();
+
+    expect(resetCollection).toHaveBeenCalledWith("website-content");
+  });
+
+  it("rejects an unauthenticated vector reset", async () => {
+    await expect(resetVectorCollectionAction()).rejects.toThrow("Unauthorized");
+    expect(resetCollection).not.toHaveBeenCalled();
   });
 });

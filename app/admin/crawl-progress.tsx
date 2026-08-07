@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, Group, Loader, Stack, Text, ThemeIcon } from "@mantine/core";
+import { Button, Card, Group, Loader, Modal, Stack, Text, ThemeIcon } from "@mantine/core";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
-import { triggerCrawl } from "./actions";
+import { resetVectorCollectionAction, triggerCrawl } from "./actions";
 
 export const STAGES = [
   { id: "crawling", label: "Scraping" },
@@ -23,7 +23,9 @@ export function CrawlProgress({
   initialRun?: RunState | null;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [isResetPending, startResetTransition] = useTransition();
   const [activeRun, setActiveRun] = useState<RunState | null>(initialRun ?? null);
+  const [resetModalOpened, setResetModalOpened] = useState(false);
 
   const { run } = useRealtimeRun(activeRun?.runId, {
     accessToken: activeRun?.publicToken,
@@ -60,6 +62,17 @@ export function CrawlProgress({
 
   const isExecuting = Boolean(activeRun && !isRunCompleted && !isRunFailed);
 
+  const handleReset = () => {
+    startResetTransition(async () => {
+      try {
+        await resetVectorCollectionAction();
+        setResetModalOpened(false);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  };
+
   return (
     <Stack gap="md">
       <Button
@@ -70,6 +83,29 @@ export function CrawlProgress({
       >
         Website jetzt neu indexieren
       </Button>
+
+      <Button color="red" variant="outline" onClick={() => setResetModalOpened(true)}>
+        Reset Vector DB
+      </Button>
+
+      <Modal
+        opened={resetModalOpened}
+        onClose={() => setResetModalOpened(false)}
+        title="Reset Vector DB?"
+        centered
+      >
+        <Stack>
+          <Text>This permanently deletes all vectors and re-initializes the collection.</Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setResetModalOpened(false)}>
+              Cancel
+            </Button>
+            <Button color="red" onClick={handleReset} loading={isResetPending}>
+              Reset Vector DB
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {activeRun && (
         <Card withBorder padding="md" radius="md">
