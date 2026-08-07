@@ -15,8 +15,8 @@
     "@mantine/core": "^9.4.1",
     "@mantine/hooks": "^9.4.1",
     "@qdrant/js-client-rest": "^1.18.0",
-    "@trigger.dev/react-hooks": "4.5.7",
-    "@trigger.dev/sdk": "4.5.7",
+    "@trigger.dev/react-hooks": "4.5.9",
+    "@trigger.dev/sdk": "4.5.9",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "ai": "^7.0.32",
@@ -26,7 +26,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@trigger.dev/build": "4.5.7",
+    "@trigger.dev/build": "4.5.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
