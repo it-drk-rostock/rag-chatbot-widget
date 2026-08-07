@@ -24,31 +24,29 @@ export async function crawlAndEmbed() {
   metadata.set("status", "queued");
   metadata.set("status", "crawling");
   const pages = await firecrawlService.crawl();
-  let chunksProcessed = 0;
-
   await resetCollection(botConfig.vectorCollection);
 
-
   const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const chunks = pages.flatMap((page) => chunkMarkdown(page.markdown, page));
+  let chunksProcessed = 0;
 
-  for (const page of pages) {
-    const chunks = chunkMarkdown(page.markdown, page);
-    if (!chunks.length) continue;
+  for (let start = 0; start < chunks.length; start += 100) {
+    const batch = chunks.slice(start, start + 100);
 
     metadata.set("status", "embedding");
     const { embeddings } = await embedMany({
       model: openai.embedding(botConfig.embeddingModel),
-      values: chunks.map((chunk) => chunk.content),
+      values: batch.map((chunk) => chunk.content),
     });
 
-    if (embeddings.length !== chunks.length) {
+    if (embeddings.length !== batch.length) {
       throw new AbortTaskRunError("OpenAI returned an incomplete embedding batch");
     }
 
     metadata.set("status", "upserting");
     await qdrantClient.upsert(botConfig.vectorCollection, {
       wait: true,
-      points: chunks.map((chunk, index) => ({
+      points: batch.map((chunk, index) => ({
         id: pointId(chunk),
         vector: embeddings[index],
         payload: {
@@ -59,7 +57,8 @@ export async function crawlAndEmbed() {
         },
       })),
     });
-    chunksProcessed += chunks.length;
+    chunksProcessed += batch.length;
+    metadata.set("chunksProcessed", chunksProcessed);
   }
 
   metadata.set("status", "completed");

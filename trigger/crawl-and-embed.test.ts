@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const metadata = { set: vi.fn() };
@@ -49,7 +49,12 @@ vi.mock("../src/services/qdrantClient", () => ({
 import { crawlAndEmbed } from "./crawl-and-embed";
 
 describe("crawlAndEmbedTask", () => {
-  it("crawls, resets collection, chunks, embeds, and upserts each page in sequence", async () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.metadata.set.mockReturnValue(mocks.metadata);
+  });
+
+  it("crawls, resets collection, chunks, embeds, and upserts content", async () => {
     const page = {
       markdown: "# Page\nFull page raw content",
       title: "Page",
@@ -105,7 +110,6 @@ describe("crawlAndEmbedTask", () => {
   });
 
   it("resets collection to purge stale vectors even when crawl returns zero pages", async () => {
-    vi.clearAllMocks();
     mocks.crawl.mockResolvedValue([]);
 
     await expect(crawlAndEmbed()).resolves.toEqual({
@@ -118,6 +122,53 @@ describe("crawlAndEmbedTask", () => {
     expect(mocks.embedMany).not.toHaveBeenCalled();
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
+
+  it("processes collected chunks in batches and tracks completed chunk counts", async () => {
+    const pages = [
+      { markdown: "page one", title: "One", url: "https://example.com/one" },
+      { markdown: "page two", title: "Two", url: "https://example.com/two" },
+    ];
+    const chunks = pages.flatMap((page, pageIndex) =>
+      Array.from({ length: pageIndex === 0 ? 101 : 100 }, (_, index) => ({
+        url: page.url,
+        title: page.title,
+        content: `chunk ${pageIndex}-${index}`,
+        index,
+      })),
+    );
+    mocks.crawl.mockResolvedValue(pages);
+    mocks.chunkMarkdown
+      .mockReturnValueOnce(chunks.slice(0, 101))
+      .mockReturnValueOnce(chunks.slice(101));
+    mocks.embedMany.mockImplementation(async ({ values }) => ({
+      embeddings: values.map(() => [0.1, 0.2]),
+    }));
+
+    await expect(crawlAndEmbed()).resolves.toEqual({ pages: 2, chunks: 201 });
+
+    expect(mocks.embedMany.mock.calls.map(([{ values }]) => values.length)).toEqual([
+      100, 100, 1,
+    ]);
+    expect(mocks.upsert.mock.calls.map(([, { points }]) => points.length)).toEqual([
+      100, 100, 1,
+    ]);
+    expect(mocks.metadata.set).toHaveBeenCalledWith("chunksProcessed", 100);
+    expect(mocks.metadata.set).toHaveBeenCalledWith("chunksProcessed", 200);
+    expect(mocks.metadata.set).toHaveBeenCalledWith("chunksProcessed", 201);
+    expect(
+      mocks.metadata.set.mock.calls
+        .filter(([key]) => key === "status")
+        .map(([, status]) => status),
+    ).toEqual([
+      "queued",
+      "crawling",
+      "embedding",
+      "upserting",
+      "embedding",
+      "upserting",
+      "embedding",
+      "upserting",
+      "completed",
+    ]);
+  });
 });
-
-
