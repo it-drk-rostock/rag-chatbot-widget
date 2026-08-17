@@ -114,15 +114,15 @@ function validateBody(value: unknown):
   }
 
   const lastUserMessage = value.messages.findLast((message) => message.role === "user");
-  const query = lastUserMessage?.parts.map((part) => part.text).join("").trim();
-  if (!query) {
+  const prompt = lastUserMessage?.parts.map((part) => part.text).join("");
+  if (!prompt?.trim()) {
     return { error: "A prompt is required", status: 400, reason: "missing user prompt" };
   }
-  if (query.length > MAX_PROMPT_CHARACTERS) {
+  if (prompt.length > MAX_PROMPT_CHARACTERS) {
     return { error: "Prompt is too large", status: 413, reason: "prompt limit exceeded" };
   }
 
-  return { body: { messages: value.messages }, query };
+  return { body: { messages: value.messages }, query: prompt.trim() };
 }
 
 async function readBoundedBody(request: Request) {
@@ -168,7 +168,11 @@ function rejection(
 
 export function OPTIONS(request: Request) {
   const origin = acceptedOrigin(request);
-  return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  const headers = corsHeaders(origin);
+  if (!origin) {
+    return rejection(403, "Origin not allowed", "invalid or missing origin", headers);
+  }
+  return new Response(null, { status: 204, headers });
 }
 
 export async function POST(request: Request) {

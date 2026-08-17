@@ -133,6 +133,18 @@ describe("POST /api/chat", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("https://client.example");
   });
 
+  it.each([
+    ["invalid", "https://invalid.example"],
+    ["missing", null],
+  ])("returns 403 for %s preflight Origin", async (_, origin) => {
+    const response = await OPTIONS(new Request("https://chat.example/api/chat", {
+      method: "OPTIONS",
+      headers: origin ? { origin } : undefined,
+    }));
+
+    expect(response.status).toBe(403);
+  });
+
   it("keeps ten requests per IP per minute policy", () => {
     expect(slidingWindow).toHaveBeenCalledWith(10, "1 m");
   });
@@ -245,6 +257,15 @@ describe("POST /api/chat", () => {
 
   it("returns 413 for latest user prompt over 2,000 characters", async () => {
     const response = await POST(request({ messages: [textMessage("1", "user", "x".repeat(2_001))] }));
+
+    expect(response.status).toBe(413);
+    expectNoExpensiveCalls();
+  });
+
+  it("counts whitespace in latest user prompt limit", async () => {
+    const response = await POST(request({
+      messages: [textMessage("1", "user", `x${" ".repeat(2_000)}`)],
+    }));
 
     expect(response.status).toBe(413);
     expectNoExpensiveCalls();
