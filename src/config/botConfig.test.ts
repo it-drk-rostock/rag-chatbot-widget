@@ -56,4 +56,25 @@ describe("botConfig", () => {
     ]);
     expect(botConfig.vectorCollection).toBe("custom-collection");
   });
+
+  it.each([
+    "example.com",
+    "https://example.com/path",
+    "https://*.example.com",
+    "https://example.com/",
+    "not an origin",
+  ])("rejects invalid allowed origin %s", (origin) => {
+    process.env.ALLOWED_ORIGINS = origin;
+
+    expect(() => botConfig.allowedOrigins).toThrow("Invalid ALLOWED_ORIGINS entry");
+  });
+
+  it("rejects empty production allowed origins", () => {
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    delete process.env.ALLOWED_ORIGINS;
+
+    expect(() => botConfig.allowedOrigins).toThrow(
+      "ALLOWED_ORIGINS is required in production",
+    );
+  });
 });

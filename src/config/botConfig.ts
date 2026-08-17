@@ -18,8 +18,34 @@ export type BotConfig = {
 };
 
 let overrideCrawlerTargetUrl: string | undefined;
-let overrideAllowedOrigins: string[] | undefined;
 let overrideVectorCollection: string | undefined;
+
+function allowedOrigins() {
+  const configured = process.env.ALLOWED_ORIGINS;
+  if (!configured) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("ALLOWED_ORIGINS is required in production");
+    }
+    return ["http://localhost:3000"];
+  }
+
+  return configured.split(",").map((entry) => {
+    const origin = entry.trim();
+    try {
+      const url = new URL(origin);
+      if (
+        (url.protocol !== "http:" && url.protocol !== "https:") ||
+        origin.includes("*") ||
+        url.origin !== origin
+      ) {
+        throw new Error();
+      }
+    } catch {
+      throw new Error(`Invalid ALLOWED_ORIGINS entry: ${origin || "(empty)"}`);
+    }
+    return origin;
+  });
+}
 
 export const botConfig: BotConfig = {
   colors: {
@@ -44,15 +70,7 @@ export const botConfig: BotConfig = {
     return Number(process.env.CRAWL_MAX_DEPTH ?? 3);
   },
   get allowedOrigins() {
-    if (overrideAllowedOrigins !== undefined) {
-      return overrideAllowedOrigins;
-    }
-    return process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
-      : ["http://localhost:3000"];
-  },
-  set allowedOrigins(val: string[]) {
-    overrideAllowedOrigins = val;
+    return allowedOrigins();
   },
   embeddingModel: "text-embedding-3-small",
   get vectorCollection() {

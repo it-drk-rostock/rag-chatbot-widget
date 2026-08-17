@@ -79,6 +79,9 @@ describe("embed.js", () => {
     message({ data: { type: "rag-chatbot:resize", open: true }, origin: "https://evil.example", source: iframe.contentWindow! });
     expect(iframe.style.width).toBe("60px");
 
+    message({ data: { type: "rag-chatbot:resize", open: true }, origin: "https://chat.example", source: {} });
+    expect(iframe.style.width).toBe("60px");
+
     message({ data: { type: "rag-chatbot:resize", open: true }, origin: "https://chat.example", source: iframe.contentWindow! });
     expect(iframe.style.width).toBe("380px");
     expect(iframe.style.height).toBe("600px");

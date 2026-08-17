@@ -82,4 +82,4 @@ All runtime backend target URLs and allowed origins are loaded dynamically from 
 - Crawling non-HTML elements (PDFs, images, binary documents).
 
 ## Further Notes
-TYPO3 host site integration remains identical via `<script src="https://<domain>/embed.js"></script>`.
+Approved TYPO3 host sites load the production embed after document parsing via `<script defer src="https://<domain>/embed.js"></script>`.

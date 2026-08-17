@@ -46,7 +46,7 @@ const request = (origin?: string, prompt = "Hello") =>
 
 describe("POST /api/chat", () => {
   beforeEach(() => {
-    botConfig.allowedOrigins = ["https://client.example"];
+    process.env.ALLOWED_ORIGINS = "https://client.example";
     limit.mockReset().mockResolvedValue({ success: true });
     openai.mockClear();
     embed.mockReset().mockResolvedValue({ embedding: [0.1, 0.2] });

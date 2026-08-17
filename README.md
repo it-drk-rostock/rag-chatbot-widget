@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Embed the Chat Widget
+
+Set `ALLOWED_ORIGINS` to the exact HTTPS origins allowed to host the Chat Widget. Separate multiple origins with commas; do not include paths, trailing slashes, or wildcards.
+
+```dotenv
+ALLOWED_ORIGINS=https://www.client.example,https://portal.client.example
+```
+
+Load the production embed over HTTPS with deferred execution:
+
+```html
+<script defer src="https://chat.example/embed.js"></script>
+```
+
+The script creates the isolated Chat Widget iframe after the host document has been parsed. Production startup fails when `ALLOWED_ORIGINS` is missing or invalid.
+
 ## Getting Started
 
 First, run the development server:

@@ -12,7 +12,8 @@ vi.mock("@ai-sdk/react", () => ({
   }),
 }));
 
-import WidgetPage, { ChatMessages } from "./page";
+import ChatWidget, { ChatMessages } from "./chat-widget";
+import WidgetPage from "./page";
 
 describe("ChatMessages", () => {
   it("renders user and assistant messages", () => {
@@ -63,15 +64,33 @@ describe("ChatMessages", () => {
     expect(page).toContain("Quelle");
   });
 
-  it("renders WidgetPage with initial welcome message", () => {
+  it("renders ChatWidget with initial welcome message", () => {
     const page = renderToStaticMarkup(
       <MantineProvider>
-        <WidgetPage />
+        <ChatWidget />
       </MantineProvider>,
     );
 
     expect(page).toContain("Website-Assistent");
     expect(page).toContain("Willkommen");
   });
-});
 
+  it("renders for an approved parent origin", async () => {
+    const widget = await WidgetPage({
+      searchParams: Promise.resolve({ parentOrigin: "http://localhost:3000" }),
+    });
+
+    expect(renderToStaticMarkup(<MantineProvider>{widget}</MantineProvider>)).toContain(
+      "Website-Assistent",
+    );
+  });
+
+  it.each([{}, { parentOrigin: "https://evil.example" }])(
+    "rejects missing or unapproved parent origin",
+    async (searchParams) => {
+      await expect(
+        WidgetPage({ searchParams: Promise.resolve(searchParams) }),
+      ).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
+    },
+  );
+});
