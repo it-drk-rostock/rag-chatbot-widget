@@ -7,13 +7,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest"
+    "test": "vitest",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.16",
     "@ai-sdk/react": "^4.0.37",
     "@mantine/core": "^9.4.1",
     "@mantine/hooks": "^9.4.1",
+    "@opennextjs/cloudflare": "^1.20.2",
     "@qdrant/js-client-rest": "^1.18.0",
     "@trigger.dev/react-hooks": "4.5.9",
     "@trigger.dev/sdk": "4.5.9",
@@ -37,6 +42,7 @@
     "eslint-config-next": "16.2.10",
     "jsdom": "^30.0.1",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.123.0"
   }
 }
