@@ -87,6 +87,28 @@ describe("POST /api/chat", () => {
     expect(createUIMessageStreamResponse).toHaveBeenCalled();
   });
 
+  it("includes Vector Payload sources in the model context", async () => {
+    search.mockResolvedValueOnce([
+      {
+        payload: {
+          title: "Example documentation",
+          url: "https://example.com/docs",
+          index: 7,
+          content: "Source-backed fact.",
+        },
+      },
+    ]);
+
+    await POST(request());
+
+    expect(streamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: `${botConfig.systemPrompt}\n\nKontext:\nTitle: Example documentation\nURL: https://example.com/docs\nContent:\nSource-backed fact.`,
+      }),
+    );
+    expect(streamText.mock.calls[0][0].system).not.toContain("7");
+  });
+
   it("omits the CORS allow-origin header for an invalid origin", async () => {
     const response = await POST(request("https://invalid.example"));
 

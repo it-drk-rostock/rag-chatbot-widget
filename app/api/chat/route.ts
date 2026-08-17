@@ -130,7 +130,9 @@ export async function POST(request: Request) {
 
       context = searchResults
         .map((res) =>
-          typeof res.payload?.content === "string" ? res.payload.content : "",
+          typeof res.payload?.content === "string"
+            ? `Title: ${res.payload.title}\nURL: ${res.payload.url}\nContent:\n${res.payload.content}`
+            : "",
         )
         .filter(Boolean)
         .join("\n\n");
