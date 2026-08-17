@@ -5,10 +5,10 @@ Upgrade `FirecrawlService` to use the official `firecrawl` Node SDK (`FirecrawlA
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] Install `firecrawl` dependency in `package.json`.
-- [ ] Refactor `FirecrawlService` in `src/services/firecrawlService.ts` to instantiate `FirecrawlApp` and call `crawlUrl()`.
-- [ ] Map SDK crawl response data to `CrawledPage[]` structure cleanly.
-- [ ] Update `src/services/firecrawlService.test.ts` to mock `FirecrawlApp` methods and verify SDK parameters and fallback options.
-- [ ] All Vitest tests pass cleanly.
+- [x] Install `firecrawl` dependency in `package.json`.
+- [x] Refactor `FirecrawlService` in `src/services/firecrawlService.ts` to instantiate `FirecrawlApp` and call `crawlUrl()`.
+- [x] Map SDK crawl response data to `CrawledPage[]` structure cleanly.
+- [x] Update `src/services/firecrawlService.test.ts` to mock `FirecrawlApp` methods and verify SDK parameters and fallback options.
+- [x] All Vitest tests pass cleanly.
