@@ -15,9 +15,7 @@ const createUIMessageStreamResponse = vi.hoisted(() => vi.fn(({ stream, headers 
 const search = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../src/services/redisClient", () => ({ redisClient: {} }));
-vi.mock("../../../src/services/qdrantClient", () => ({
-  qdrantClient: { search },
-}));
+vi.mock("../../../src/services/qdrantClient", () => ({ qdrantClient: { search } }));
 vi.mock("@upstash/ratelimit", () => ({
   Ratelimit: class {
     static slidingWindow = slidingWindow;
@@ -37,158 +35,252 @@ vi.mock("ai", () => ({
 
 import { OPTIONS, POST } from "./route";
 
-const request = (origin?: string, prompt = "Hello") =>
+const textMessage = (id: string, role: "user" | "assistant", text: string) => ({
+  id,
+  role,
+  parts: [{ type: "text" as const, text }],
+});
+
+const request = (
+  body: unknown = { prompt: "Hello" },
+  origin: string | null = "https://chat.example",
+  headers: Record<string, string> = {},
+) =>
   new Request("https://chat.example/api/chat", {
     method: "POST",
-    headers: origin ? { origin } : undefined,
-    body: JSON.stringify({ prompt }),
+    headers: { ...(origin ? { origin } : {}), ...headers },
+    body: typeof body === "string" ? body : JSON.stringify(body),
   });
+
+function expectNoExpensiveCalls() {
+  expect(embed).not.toHaveBeenCalled();
+  expect(search).not.toHaveBeenCalled();
+  expect(convertToModelMessages).not.toHaveBeenCalled();
+  expect(streamText).not.toHaveBeenCalled();
+}
 
 describe("POST /api/chat", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     process.env.ALLOWED_ORIGINS = "https://client.example";
     limit.mockReset().mockResolvedValue({ success: true });
     openai.mockClear();
     embed.mockReset().mockResolvedValue({ embedding: [0.1, 0.2] });
     search.mockReset().mockResolvedValue([{ payload: { content: "Found facts." } }]);
+    convertToModelMessages.mockClear();
     streamText.mockReset().mockReturnValue({ stream: "model-stream" });
   });
 
-  it("streams response via createUIMessageStreamResponse with CORS headers", async () => {
-    const response = await POST(
-      new Request("https://chat.example/api/chat", {
-        method: "POST",
-        headers: {
-          origin: "https://client.example",
-          "cf-connecting-ip": "198.51.100.20",
-        },
-        body: JSON.stringify({ prompt: "Hello" }),
-      }),
-    );
+  it("streams responses for a configured origin", async () => {
+    const response = await POST(request(
+      { prompt: "Hello" },
+      "https://client.example",
+      { "cf-connecting-ip": "198.51.100.20" },
+    ));
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBe(
-      "https://client.example",
-    );
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://client.example");
     expect(limit).toHaveBeenCalledWith("198.51.100.20");
-    expect(embed).toHaveBeenCalledWith({
-      model: "text-embedding-3-small",
-      value: "Hello",
-    });
-    expect(search).toHaveBeenCalledWith("website-content", {
-      vector: [0.1, 0.2],
-      limit: 5,
-    });
+    expect(embed).toHaveBeenCalledWith({ model: "text-embedding-3-small", value: "Hello" });
+    expect(search).toHaveBeenCalledWith("website-content", { vector: [0.1, 0.2], limit: 5 });
     expect(streamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        system: expect.stringContaining("Found facts."),
-      }),
+      expect.objectContaining({ system: expect.stringContaining("Found facts.") }),
     );
     expect(createUIMessageStreamResponse).toHaveBeenCalled();
   });
 
-  it("includes Vector Payload sources in the model context", async () => {
-    search.mockResolvedValueOnce([
-      {
-        payload: {
-          title: "Example documentation",
-          url: "https://example.com/docs",
-          index: 7,
-          content: "Source-backed fact.",
-        },
-      },
-    ]);
+  it("includes Vector Payload sources in model context", async () => {
+    search.mockResolvedValueOnce([{ payload: {
+      title: "Example documentation",
+      url: "https://example.com/docs",
+      index: 7,
+      content: "Source-backed fact.",
+    } }]);
 
     await POST(request());
 
-    expect(streamText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        system: `${botConfig.systemPrompt}\n\nKontext:\nTitle: Example documentation\nURL: https://example.com/docs\nContent:\nSource-backed fact.`,
-      }),
-    );
+    expect(streamText).toHaveBeenCalledWith(expect.objectContaining({
+      system: `${botConfig.systemPrompt}\n\nKontext:\nTitle: Example documentation\nURL: https://example.com/docs\nContent:\nSource-backed fact.`,
+    }));
     expect(streamText.mock.calls[0][0].system).not.toContain("7");
   });
 
-  it("omits the CORS allow-origin header for an invalid origin", async () => {
-    const response = await POST(request("https://invalid.example"));
+  it.each([
+    ["invalid", "https://invalid.example"],
+    ["missing", null],
+  ])("returns 403 for %s Origin before downstream work", async (_, origin) => {
+    const response = await POST(request(undefined, origin));
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.status).toBe(403);
+    expect(limit).not.toHaveBeenCalled();
+    expectNoExpensiveCalls();
   });
 
-  it("allows the API's own origin", async () => {
-    const response = await POST(request("https://chat.example"));
-
-    expect(response.headers.get("access-control-allow-origin")).toBe(
-      "https://chat.example",
-    );
-  });
-
-  it("answers preflight requests for a configured origin", async () => {
-    const response = await OPTIONS(
-      new Request("https://chat.example/api/chat", {
-        method: "OPTIONS",
-        headers: { origin: "https://client.example" },
-      }),
-    );
-
-    expect(response.status).toBe(204);
-    expect(response.headers.get("access-control-allow-origin")).toBe(
-      "https://client.example",
-    );
-  });
-
-  it("returns a 429 JSON response when the IP limit is exceeded", async () => {
-    limit.mockResolvedValueOnce({ success: false });
-
-    const response = await POST(request("https://client.example"));
-
-    expect(response.status).toBe(429);
-    await expect(response.json()).resolves.toEqual({
-      error: "Too many requests",
-    });
-  });
-
-  it("logs rate-limit failures and allows the request", async () => {
-    const error = new Error("Redis unavailable");
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    limit.mockRejectedValueOnce(error);
-
+  it("allows API own origin", async () => {
     const response = await POST(request());
 
     expect(response.status).toBe(200);
-    expect(consoleError).toHaveBeenCalledWith("Rate limit check failed", error);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://chat.example");
+  });
+
+  it("answers preflight requests for a configured origin", async () => {
+    const response = await OPTIONS(new Request("https://chat.example/api/chat", {
+      method: "OPTIONS",
+      headers: { origin: "https://client.example" },
+    }));
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://client.example");
+  });
+
+  it("keeps ten requests per IP per minute policy", () => {
+    expect(slidingWindow).toHaveBeenCalledWith(10, "1 m");
+  });
+
+  it("returns 429 without expensive work when IP limit is exceeded", async () => {
+    limit.mockResolvedValueOnce({ success: false });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ error: "Too many requests" });
+    expectNoExpensiveCalls();
+  });
+
+  it("returns 503 without expensive work when rate limiting throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    limit.mockRejectedValueOnce(new Error("Redis unavailable"));
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(503);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Chat rate limiting unavailable: Redis check failed",
+      expect.any(Error),
+    );
+    expectNoExpensiveCalls();
     consoleError.mockRestore();
   });
 
-  it("rejects missing prompts", async () => {
-    const response = await POST(
-      new Request("https://chat.example/api/chat", {
-        method: "POST",
-        body: JSON.stringify({}),
-      }),
-    );
+  it.each([
+    ["missing URL", undefined, "redis-token"],
+    ["invalid URL", "not-a-url", "redis-token"],
+    ["missing token", "https://redis.example", undefined],
+  ])("returns 503 in production for %s", async (_, url, token) => {
+    vi.stubEnv("NODE_ENV", "production");
+    if (url === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
+    else process.env.UPSTASH_REDIS_REST_URL = url;
+    if (token === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    else process.env.UPSTASH_REDIS_REST_TOKEN = token;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "A prompt is required" });
+    const response = await POST(request());
+
+    expect(response.status).toBe(503);
+    expect(limit).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Chat rate limiting unavailable: invalid production configuration",
+    );
+    expectNoExpensiveCalls();
+    consoleError.mockRestore();
   });
 
-  it("handles UIMessage[] payload from useChat", async () => {
-    const messages = [
-      { id: "1", role: "user" as const, parts: [{ type: "text" as const, text: "Tell me more" }] },
-    ];
-    const response = await POST(
-      new Request("https://chat.example/api/chat", {
-        method: "POST",
-        body: JSON.stringify({ messages }),
-      }),
-    );
+  it("returns 413 for body over 32 KiB without trusting Content-Length", async () => {
+    const body = JSON.stringify({ prompt: "Hello", padding: "x".repeat(32_768) });
+
+    const response = await POST(request(body, undefined, { "content-length": "1" }));
+
+    expect(response.status).toBe(413);
+    expectNoExpensiveCalls();
+  });
+
+  it("accepts body exactly 32 KiB", async () => {
+    const prefix = '{"prompt":"Hello","padding":"';
+    const suffix = '"}';
+    const body = prefix + "x".repeat(32_768 - prefix.length - suffix.length) + suffix;
+
+    const response = await POST(request(body));
+
+    expect(new TextEncoder().encode(body)).toHaveLength(32_768);
+    expect(response.status).toBe(200);
+  });
+
+  it("returns 400 for invalid JSON", async () => {
+    const response = await POST(request("{"));
+
+    expect(response.status).toBe(400);
+    expectNoExpensiveCalls();
+  });
+
+  it.each([
+    ["non-object body", []],
+    ["non-string prompt", { prompt: 1 }],
+    ["non-array messages", { messages: {} }],
+    ["invalid role", { messages: [{ id: "1", role: "system", parts: [{ type: "text", text: "Hi" }] }] }],
+    ["invalid part", { messages: [{ id: "1", role: "user", parts: [{ type: "image", url: "x" }] }] }],
+    ["invalid text", { messages: [{ id: "1", role: "user", parts: [{ type: "text", text: 1 }] }] }],
+  ])("returns 400 for %s", async (_, body) => {
+    const response = await POST(request(body));
+
+    expect(response.status).toBe(400);
+    expectNoExpensiveCalls();
+  });
+
+  it("returns 413 for more than 20 messages", async () => {
+    const messages = Array.from({ length: 21 }, (_, index) =>
+      textMessage(String(index), index % 2 ? "assistant" : "user", "x"));
+
+    const response = await POST(request({ messages }));
+
+    expect(response.status).toBe(413);
+    expectNoExpensiveCalls();
+  });
+
+  it("accepts exactly 20 messages", async () => {
+    const messages = Array.from({ length: 20 }, (_, index) =>
+      textMessage(String(index), index % 2 ? "assistant" : "user", "x"));
+
+    expect((await POST(request({ messages }))).status).toBe(200);
+  });
+
+  it("returns 413 for latest user prompt over 2,000 characters", async () => {
+    const response = await POST(request({ messages: [textMessage("1", "user", "x".repeat(2_001))] }));
+
+    expect(response.status).toBe(413);
+    expectNoExpensiveCalls();
+  });
+
+  it("accepts latest user prompt exactly 2,000 characters", async () => {
+    const response = await POST(request({ messages: [textMessage("1", "user", "x".repeat(2_000))] }));
 
     expect(response.status).toBe(200);
-    expect(embed).toHaveBeenCalledWith({
-      model: "text-embedding-3-small",
-      value: "Tell me more",
-    });
+  });
+
+  it("returns 413 for total conversation text over 12,000 characters", async () => {
+    const messages = [
+      textMessage("1", "assistant", "x".repeat(10_001)),
+      textMessage("2", "user", "x".repeat(2_000)),
+    ];
+
+    const response = await POST(request({ messages }));
+
+    expect(response.status).toBe(413);
+    expectNoExpensiveCalls();
+  });
+
+  it("accepts total conversation text exactly 12,000 characters", async () => {
+    const messages = Array.from({ length: 6 }, (_, index) =>
+      textMessage(String(index), index % 2 ? "assistant" : "user", "x".repeat(2_000)));
+
+    expect((await POST(request({ messages }))).status).toBe(200);
+  });
+
+  it("handles UIMessage payload from useChat", async () => {
+    const messages = [textMessage("1", "user", "Tell me more")];
+    const response = await POST(request({ messages }));
+
+    expect(response.status).toBe(200);
+    expect(embed).toHaveBeenCalledWith({ model: "text-embedding-3-small", value: "Tell me more" });
     expect(convertToModelMessages).toHaveBeenCalledWith(messages);
   });
 });

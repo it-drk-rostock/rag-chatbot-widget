@@ -52,6 +52,7 @@ describe("POST /api/chat OpenAI integration", () => {
     const response = await POST(
       new Request("https://chat.example/api/chat", {
         method: "POST",
+        headers: { origin: "https://chat.example" },
         body: JSON.stringify({ prompt: "Hello" }),
       }),
     );
