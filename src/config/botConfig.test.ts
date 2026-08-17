@@ -77,4 +77,15 @@ describe("botConfig", () => {
       "ALLOWED_ORIGINS is required in production",
     );
   });
+
+  it("accepts optional ports and normalizes default ports", () => {
+    process.env.ALLOWED_ORIGINS =
+      "https://example.com:443,http://example.com:80,https://example.com:8443";
+
+    expect(botConfig.allowedOrigins).toEqual([
+      "https://example.com",
+      "http://example.com",
+      "https://example.com:8443",
+    ]);
+  });
 });

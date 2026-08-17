@@ -1,7 +1,7 @@
 # 2. Iframe-based Chat Widget Embedding
 
 ## Context
-The chatbot widget needs to be embedded on approved client websites (such as a TYPO3 frontend) via simple HTML inputs. We must guarantee that styles from the host page do not bleed into the chatbot widget, and that the chatbot widget's CSS does not alter the host page's formatting.
+The Chat Widget needs to be embedded on approved client websites (such as a TYPO3 frontend) via simple HTML inputs. We must guarantee that styles from the host page do not bleed into the Chat Widget, and that the Chat Widget's CSS does not alter the host page's formatting.
 
 ## Decision
 We decided to serve the Chat Widget UI inside a dedicated Next.js path (`/widget`) loaded in an `iframe` element. `ALLOWED_ORIGINS` defines the approved client website origins, and a route-specific Content Security Policy enforces that allowlist through `frame-ancestors`. To handle resizing and toggle interactions for a floating bubble, we serve a lightweight `<script>` wrapper (`embed.js`) that dynamically instantiates and controls the dimensions of the iframe.

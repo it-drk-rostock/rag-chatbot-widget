@@ -33,17 +33,21 @@ function allowedOrigins() {
     const origin = entry.trim();
     try {
       const url = new URL(origin);
+      const defaultPort = url.protocol === "https:" ? ":443" : ":80";
+      const comparableOrigin = origin.endsWith(defaultPort)
+        ? origin.slice(0, -defaultPort.length)
+        : origin;
       if (
         (url.protocol !== "http:" && url.protocol !== "https:") ||
         origin.includes("*") ||
-        url.origin !== origin
+        url.origin !== comparableOrigin
       ) {
         throw new Error();
       }
     } catch {
       throw new Error(`Invalid ALLOWED_ORIGINS entry: ${origin || "(empty)"}`);
     }
-    return origin;
+    return new URL(origin).origin;
   });
 }
 

@@ -5,8 +5,8 @@ A retrieval-augmented generation chatbot widget that can be embedded on client w
 ## Language
 
 **Bot Configuration**:
-Statically defined settings (e.g. colors, bot name, welcome message, system prompt, crawler target URL) stored in code.
-_Avoid_: Dynamic settings, database config
+Central settings stored in code, with deployment-specific values such as approved origins read from environment variables.
+_Avoid_: Database-backed or per-request configuration
 
 **Admin Dashboard**:
 A secure, password-protected single-page interface used to trigger website crawling and monitor indexing status.
@@ -35,6 +35,5 @@ _Avoid_: Wiping vector DB during active chat traffic without admin confirmation
 **Firecrawl SDK Wrapper**:
 The application service interface wrapping the official `@mendable/firecrawl-js` client SDK, eliminating legacy raw REST fetch calls and manual polling timeouts.
 _Avoid_: Custom HTTP polling loops, direct raw REST API requests to Firecrawl
-
 
 

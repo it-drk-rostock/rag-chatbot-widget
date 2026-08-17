@@ -1,6 +1,12 @@
 import { MantineProvider } from "@mantine/core";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const requestHeaders = vi.hoisted(() => new Headers());
+
+vi.mock("next/headers", () => ({
+  headers: () => Promise.resolve(requestHeaders),
+}));
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: () => ({
@@ -16,6 +22,10 @@ import ChatWidget, { ChatMessages } from "./chat-widget";
 import WidgetPage from "./page";
 
 describe("ChatMessages", () => {
+  beforeEach(() => {
+    requestHeaders.set("sec-fetch-dest", "iframe");
+  });
+
   it("renders user and assistant messages", () => {
     const page = renderToStaticMarkup(
       <MantineProvider>
@@ -93,4 +103,14 @@ describe("ChatMessages", () => {
       ).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
     },
   );
+
+  it("rejects direct top-level navigation", async () => {
+    requestHeaders.set("sec-fetch-dest", "document");
+
+    await expect(
+      WidgetPage({
+        searchParams: Promise.resolve({ parentOrigin: "http://localhost:3000" }),
+      }),
+    ).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
+  });
 });
