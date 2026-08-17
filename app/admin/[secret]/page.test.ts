@@ -56,6 +56,7 @@ describe("admin path", () => {
     const html = await loginResponse.text();
     expect(html).toContain("Admin password");
     expect(html).not.toContain("Run hello-world");
+    expect(html).not.toContain("Website-Assistent");
   });
 
   it("shows the dashboard only after login creates a valid session cookie", async () => {
@@ -84,11 +85,14 @@ describe("admin path", () => {
     const dashboardHtml = await dashboard.text();
     expect(dashboardHtml).toContain("Admin Dashboard");
     expect(dashboardHtml).toContain("Run hello-world");
+    expect(dashboardHtml).toContain("Website-Assistent");
     expect(dashboardHtml).toContain("Log out");
 
     const tamperedCookieResponse = await fetch(`${baseUrl}/admin/correct-secret`, {
       headers: { cookie: "admin-session=0.invalid" },
     });
-    expect(await tamperedCookieResponse.text()).not.toContain("Run hello-world");
+    const tamperedHtml = await tamperedCookieResponse.text();
+    expect(tamperedHtml).not.toContain("Run hello-world");
+    expect(tamperedHtml).not.toContain("Website-Assistent");
   });
 });

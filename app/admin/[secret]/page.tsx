@@ -1,6 +1,7 @@
 import { Button, Container, Paper, Stack, Title } from "@mantine/core";
 import { notFound } from "next/navigation";
 import { HelloWorldButton } from "../../hello-world-button";
+import ChatWidget from "../../widget/chat-widget";
 import { isAdminAuthenticated, logout } from "../actions";
 import { CrawlProgress } from "../crawl-progress";
 import { LoginForm } from "../login-form";
@@ -24,6 +25,7 @@ export default async function AdminPage({
             <>
               <CrawlProgress />
               <HelloWorldButton />
+              <ChatWidget />
               <form action={logout}>
                 <Button type="submit" variant="subtle">
                   Log out
