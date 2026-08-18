@@ -49,14 +49,17 @@ function corsHeaders(origin: string | null) {
   return headers;
 }
 
-type TextMessage = {
+type ChatMessage = {
   id: string;
   role: "user" | "assistant";
-  parts: Array<{ type: "text"; text: string }>;
+  parts: Array<
+    | { type: "text"; text: string }
+    | { type: "step-start" }
+  >;
 };
 
 type ChatBody =
-  | { messages: TextMessage[]; prompt?: never }
+  | { messages: ChatMessage[]; prompt?: never }
   | { messages?: never; prompt: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -92,21 +95,26 @@ function validateBody(value: unknown):
   }
   if (
     value.messages.length === 0 ||
-    !value.messages.every((message): message is TextMessage =>
+    !value.messages.every((message): message is ChatMessage =>
       isRecord(message) &&
       typeof message.id === "string" &&
       (message.role === "user" || message.role === "assistant") &&
       Array.isArray(message.parts) &&
       message.parts.length > 0 &&
       message.parts.every((part) =>
-        isRecord(part) && part.type === "text" && typeof part.text === "string"),
+        isRecord(part) &&
+        ((part.type === "text" && typeof part.text === "string") ||
+          part.type === "step-start")),
     )
   ) {
     return { error: "Invalid messages", status: 400, reason: "invalid message shape" };
   }
 
   const totalCharacters = value.messages.reduce(
-    (total, message) => total + message.parts.reduce((sum, part) => sum + part.text.length, 0),
+    (total, message) => total + message.parts.reduce(
+      (sum, part) => sum + (part.type === "text" ? part.text.length : 0),
+      0,
+    ),
     0,
   );
   if (totalCharacters > MAX_CONVERSATION_CHARACTERS) {
@@ -114,7 +122,10 @@ function validateBody(value: unknown):
   }
 
   const lastUserMessage = value.messages.findLast((message) => message.role === "user");
-  const prompt = lastUserMessage?.parts.map((part) => part.text).join("");
+  const prompt = lastUserMessage?.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("");
   if (!prompt?.trim()) {
     return { error: "A prompt is required", status: 400, reason: "missing user prompt" };
   }

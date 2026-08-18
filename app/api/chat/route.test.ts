@@ -103,6 +103,9 @@ describe("POST /api/chat", () => {
       system: `${botConfig.systemPrompt}\n\nKontext:\nTitle: Example documentation\nURL: https://example.com/docs\nContent:\nSource-backed fact.`,
     }));
     expect(streamText.mock.calls[0][0].system).not.toContain("7");
+    expect(streamText.mock.calls[0][0].system).toContain(
+      "Verlinke immer die spezifischste passende Quellseite",
+    );
   });
 
   it.each([
@@ -302,6 +305,30 @@ describe("POST /api/chat", () => {
 
     expect(response.status).toBe(200);
     expect(embed).toHaveBeenCalledWith({ model: "text-embedding-3-small", value: "Tell me more" });
+    expect(convertToModelMessages).toHaveBeenCalledWith(messages);
+  });
+
+  it("accepts a follow-up after an AI SDK step-start part", async () => {
+    const messages = [
+      textMessage("1", "user", "What services are available?"),
+      {
+        id: "2",
+        role: "assistant" as const,
+        parts: [
+          { type: "step-start" as const },
+          { type: "text" as const, text: "Several services are available." },
+        ],
+      },
+      textMessage("3", "user", "Tell me more about the first one."),
+    ];
+
+    const response = await POST(request({ messages }));
+
+    expect(response.status).toBe(200);
+    expect(embed).toHaveBeenCalledWith({
+      model: "text-embedding-3-small",
+      value: "Tell me more about the first one.",
+    });
     expect(convertToModelMessages).toHaveBeenCalledWith(messages);
   });
 });

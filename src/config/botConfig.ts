@@ -60,7 +60,7 @@ export const botConfig: BotConfig = {
   name: "Website-Assistent",
   welcomeMessage: "Hallo! Wie kann ich Ihnen helfen?",
   systemPrompt:
-    "Beantworte Fragen ausschließlich anhand des bereitgestellten Kontexts und verlinke die verwendeten Quellen als Markdown.",
+    "Beantworte Fragen ausschließlich anhand des bereitgestellten Kontexts und verlinke die verwendeten Quellen als Markdown. Verlinke immer die spezifischste passende Quellseite aus dem Kontext und nicht pauschal die Startseite.",
   get crawlerTargetUrl() {
     return overrideCrawlerTargetUrl ?? process.env.CRAWLER_TARGET_URL ?? "https://example.com";
   },
