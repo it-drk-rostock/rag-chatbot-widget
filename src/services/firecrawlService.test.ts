@@ -52,6 +52,7 @@ describe("FirecrawlService", () => {
     expect(firecrawlMocks.crawl).toHaveBeenCalledWith("https://example.com", {
       maxDiscoveryDepth: 2,
       limit: 5,
+      pollInterval: 15,
       excludePaths: ["/impressum", "/datenschutz"],
       scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
     });

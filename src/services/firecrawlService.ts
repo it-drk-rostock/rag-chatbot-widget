@@ -17,6 +17,7 @@ export class FirecrawlService {
     const result = await this.firecrawl.crawl(url, {
       maxDiscoveryDepth: botConfig.crawlMaxDepth,
       limit: botConfig.crawlLimit,
+      pollInterval: 15,
       excludePaths: ["/impressum", "/datenschutz"],
       scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
     });
